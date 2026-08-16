@@ -1,0 +1,40 @@
+import { Router } from 'express';
+import healthRoutes from './health.routes';
+import authRoutes from './auth.routes';
+import userRoutes from './user.routes';
+import masterRoutes from './master.routes';
+import accountRoutes from './account.routes';
+import transactionRoutes from './transaction.routes';
+import paymentRoutes from './payment.routes';
+import transferRoutes from './transfer.routes';
+import expenseRoutes from './expense.routes';
+import salaryRoutes from './salary.routes';
+import advanceRoutes from './advance.routes';
+import employeeRoutes from './employee.routes';
+import reportRoutes from './report.routes';
+import paymentCategoryRoutes from './payment-category.routes';
+import approvalRuleRoutes from './approval-rule.routes';
+import companyRoutes from './company.routes';
+import leaveRoutes from './leave.routes';
+
+const router = Router();
+
+router.use('/health', healthRoutes);
+router.use('/auth', authRoutes);
+router.use('/company', companyRoutes);
+router.use('/users', userRoutes);
+router.use('/masters', masterRoutes);
+router.use('/accounts', accountRoutes);
+router.use('/ledger', transactionRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/transfers', transferRoutes);
+router.use('/expenses', expenseRoutes);
+router.use('/salaries', salaryRoutes);
+router.use('/advances', advanceRoutes);
+router.use('/employees', employeeRoutes);
+router.use('/reports', reportRoutes);
+router.use('/payment-categories', paymentCategoryRoutes);
+router.use('/approval-rules', approvalRuleRoutes);
+router.use('/leaves', leaveRoutes);
+
+export default router;

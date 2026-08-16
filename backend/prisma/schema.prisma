@@ -1,0 +1,765 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  logo      String?
+  gstin     String?
+  timezone  String   @default("UTC")
+  currency  String   @default("INR")
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users                User[]
+  auditLogs            AuditLog[]
+  accounts             Account[]
+  clients              Client[]
+  vendors              Vendor[]
+  employees            Employee[]
+  loans                Loan[]
+  transactions         Transaction[]
+  vouchers             Voucher[]
+  departments          Department[]
+  designations         Designation[]
+  expenseCategories    ExpenseCategory[]
+  paymentCategories    PaymentCategory[]
+  expenses             Expense[]
+  approvalRules        ApprovalRule[]
+  approvalRequests     ApprovalRequest[]
+  salaryStructures     SalaryStructure[]
+  payrolls             Payroll[]
+  advances             Advance[]
+  employeeBankAccounts EmployeeBankAccount[]
+  leaveTypes           LeaveType[]
+  leaveBalances        LeaveBalance[]
+  leaveRequests        LeaveRequest[]
+  leavePolicies        LeavePolicy[]
+  holidays             Holiday[]
+
+  @@map("companies")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  companyId    String   @map("company_id")
+  name         String?
+  phone        String?  @unique
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  employeeId   String?  @map("employee_id")
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  company           Company               @relation(fields: [companyId], references: [id])
+  employee          Employee?             @relation(fields: [employeeId], references: [id])
+  refreshTokens     RefreshToken[]
+  auditLogs         AuditLog[]
+  userRoles         UserRole[]
+  userPermissions   UserPermission[]
+  transactions      Transaction[]
+  expenses          Expense[]
+  approvalSteps     ApprovalStep[]
+  advancesCreated   Advance[]             @relation("AdvanceCreator")
+  bankVerifications EmployeeBankAccount[] @relation("BankVerifier")
+  approvedLeaves    LeaveRequest[]        @relation("LeaveApprover")
+  rejectedLeaves    LeaveRequest[]        @relation("LeaveRejector")
+  cancelledLeaves   LeaveRequest[]        @relation("LeaveCanceller")
+  leaveApprovals    LeaveApproval[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String   @id @default(uuid())
+  roleId       String   @map("role_id")
+  permissionId String   @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// User-specific extra permissions (on top of role permissions)
+model UserPermission {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  permissionId String   @map("permission_id")
+  grantedBy    String   @map("granted_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  userId    String   @map("user_id")
+  module    String
+  recordId  String   @map("record_id")
+  action    String
+  oldData   String?  @map("old_data")
+  newData   String?  @map("new_data")
+  ipAddress String   @map("ip_address")
+  userAgent String   @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Account {
+  id             String    @id @default(uuid())
+  companyId      String    @map("company_id")
+  name           String
+  type           String // "CASH", "BANK", "UPI", "CARD", "OTHER"
+  bankName       String?   @map("bank_name")
+  accountNumber  String?   @map("account_number")
+  ifsc           String?
+  openingBalance Float     @default(0.0) @map("opening_balance")
+  currentBalance Float     @default(0.0) @map("current_balance")
+  version        Int       @default(0) // OCC
+  status         String    @default("ACTIVE")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  company              Company       @relation(fields: [companyId], references: [id])
+  transactions         Transaction[]
+  vouchers             Voucher[]
+  payrollItems         PayrollItem[]
+  advanceDisbursements Advance[]     @relation("AdvanceDisbursements")
+
+  @@map("accounts")
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  name      String
+  email     String?
+  mobile    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  transactions Transaction[]
+
+  @@map("clients")
+}
+
+model Vendor {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  name      String
+  email     String?
+  mobile    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  transactions Transaction[]
+
+  @@map("vendors")
+}
+
+model Employee {
+  id            String   @id @default(uuid())
+  companyId     String   @map("company_id")
+  employeeCode  String   @map("employee_code")
+  name          String
+  joiningDate   DateTime @map("joining_date")
+  mobile        String
+  email         String
+  address       String
+  photo         String?
+  status        String   @default("ACTIVE")
+  departmentId  String?  @map("department_id")
+  designationId String?  @map("designation_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  company          Company               @relation(fields: [companyId], references: [id])
+  department       Department?           @relation(fields: [departmentId], references: [id])
+  designation      Designation?          @relation(fields: [designationId], references: [id])
+  transactions     Transaction[]
+  expenses         Expense[]
+  salaryStructures SalaryStructure[]
+  payrollItems     PayrollItem[]
+  advances         Advance[]
+  bankAccounts     EmployeeBankAccount[]
+  users            User[]
+  leaveBalances    LeaveBalance[]
+  leaveRequests    LeaveRequest[]
+
+  @@unique([companyId, employeeCode])
+  @@map("employees")
+}
+
+model Loan {
+  id                 String   @id @default(uuid())
+  companyId          String   @map("company_id")
+  loanNo             String   @unique @map("loan_no")
+  lender             String
+  principal          Float
+  interestRate       Float    @map("interest_rate")
+  receivedDate       DateTime @map("received_date")
+  purpose            String
+  receivingAccountId String   @map("receiving_account_id")
+  status             String   @default("ACTIVE")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  transactions Transaction[]
+
+  @@map("loans")
+}
+
+model Transaction {
+  id              String   @id @default(uuid())
+  companyId       String   @map("company_id")
+  transactionNo   String   @unique @map("transaction_no")
+  type            String // "PAYMENT_IN", "PAYMENT_OUT", "TRANSFER_OUT", "TRANSFER_IN", "REVERSAL"
+  category        String // "CLIENT_PAYMENT", "OFFICE_EXPENSE", "VENDOR_PAYMENT", "STAFF_REIMBURSEMENT", "STAFF_ADVANCE", "SALARY_PAYMENT", "LOAN_RECEIVED", "LOAN_REPAYMENT", "RECEIVABLE_RETURN", "INTERNAL_TRANSFER", "OTHER"
+  date            DateTime
+  amount          Float
+  runningBalance  Float    @default(0.0) @map("running_balance")
+  accountId       String   @map("account_id")
+  purpose         String
+  paymentMode     String   @map("payment_mode") // "CASH", "BANK_TRANSFER", "UPI", "CREDIT_CARD", "DEBIT_CARD", "CHEQUE", "OTHER"
+  referenceNo     String?  @map("reference_no")
+  transferGroupId String?  @map("transfer_group_id")
+  reversalOfId    String?  @unique @map("reversal_of_id")
+  createdBy       String   @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  expenseId       String?  @map("expense_id")
+  payrollItemId   String?  @map("payroll_item_id")
+  advanceId       String?  @map("advance_id")
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  account     Account      @relation(fields: [accountId], references: [id])
+  creator     User         @relation(fields: [createdBy], references: [id])
+  client      Client?      @relation(fields: [clientId], references: [id])
+  vendor      Vendor?      @relation(fields: [vendorId], references: [id])
+  employee    Employee?    @relation(fields: [employeeId], references: [id])
+  loan        Loan?        @relation(fields: [loanId], references: [id])
+  reversal    Transaction? @relation("TransactionReversal", fields: [reversalOfId], references: [id])
+  reversedBy  Transaction? @relation("TransactionReversal")
+  expense     Expense?     @relation(fields: [expenseId], references: [id])
+  payrollItem PayrollItem? @relation(fields: [payrollItemId], references: [id])
+  advance     Advance?     @relation(fields: [advanceId], references: [id])
+  vouchers    Voucher[]
+
+  // Target Parties nullable FKs
+  clientId   String? @map("client_id")
+  vendorId   String? @map("vendor_id")
+  employeeId String? @map("employee_id")
+  loanId     String? @map("loan_id")
+
+  @@map("transactions")
+}
+
+// NOTE: lowercase plural mappings to vouchers table name to preserve legacy references
+model Voucher {
+  id            String  @id @default(uuid())
+  companyId     String  @map("company_id")
+  voucherNo     String  @unique @map("voucher_no")
+  transactionId String? @map("transaction_id") // Made optional
+  filePath      String? @map("file_path")
+
+  // Standalone fields for Pending state
+  amount      Float   @default(0)
+  purpose     String  @default("")
+  category    String  @default("OTHER")
+  accountId   String? @map("account_id")
+  paymentMode String  @default("CASH") @map("payment_mode")
+  referenceNo String? @map("reference_no")
+  status        String   @default("COMPLETED") // "PENDING_APPROVAL", "APPROVED", "COMPLETED", "REJECTED"
+  
+  createdBy     String   @default("system") @map("created_by")
+  approvedBy    String?  @map("approved_by")
+  disbursedBy String? @map("disbursed_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  account     Account?     @relation(fields: [accountId], references: [id])
+
+  @@map("vouchers")
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  employees Employee[]
+
+  @@map("departments")
+}
+
+model Designation {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  employees Employee[]
+
+  @@map("designations")
+}
+
+model ExpenseCategory {
+  id        String    @id @default(uuid())
+  companyId String    @map("company_id")
+  name      String
+  status    String    @default("ACTIVE")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  company            Company             @relation(fields: [companyId], references: [id])
+  expenses           Expense[]
+  advanceSettlements AdvanceSettlement[]
+
+  @@map("expense_categories")
+}
+
+model PaymentCategory {
+  id        String    @id @default(uuid())
+  companyId String    @map("company_id")
+  name      String
+  type      String // "PAYMENT_IN", "PAYMENT_OUT", "BOTH"
+  status    String    @default("ACTIVE")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("payment_categories")
+}
+
+model Expense {
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
+  expenseNo        String   @unique @map("expense_no")
+  employeeId       String   @map("employee_id")
+  categoryId       String   @map("category_id")
+  amount           Float
+  date             DateTime
+  purpose          String
+  paymentMode      String   @map("payment_mode") // "CASH", "BANK_TRANSFER", "UPI", "CREDIT_CARD", "DEBIT_CARD", "CHEQUE", "OTHER"
+  receiptUrl       String?  @map("receipt_url")
+  paymentReference String?  @map("payment_reference")
+  paymentProofUrl  String?  @map("payment_proof_url")
+  status           String   @default("DRAFT") // "DRAFT", "SUBMITTED", "UNDER_REVIEW", "RETURNED_FOR_CORRECTION", "APPROVED", "REJECTED", "REIMBURSED"
+  createdBy        String   @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  company      Company         @relation(fields: [companyId], references: [id])
+  employee     Employee        @relation(fields: [employeeId], references: [id])
+  category     ExpenseCategory @relation(fields: [categoryId], references: [id])
+  creator      User            @relation(fields: [createdBy], references: [id])
+  transactions Transaction[]
+
+  @@map("expenses")
+}
+
+model ApprovalRule {
+  id            String   @id @default(uuid())
+  companyId     String   @map("company_id")
+  module        String // "EXPENSE", "ADVANCE", "SALARY", "BANK_ACCOUNT", "PAYMENT_OUT"
+  minAmount     Float    @map("min_amount")
+  maxAmount     Float    @map("max_amount")
+  approverRoles String   @map("approver_roles") // e.g. "ACCOUNTS,ADMIN"
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("approval_rules")
+}
+
+model ApprovalRequest {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  module      String // "EXPENSE", "ADVANCE", etc.
+  recordId    String   @map("record_id")
+  status      String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "RETURNED"
+  currentStep Int      @default(0) @map("current_step")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company       Company        @relation(fields: [companyId], references: [id])
+  approvalSteps ApprovalStep[]
+
+  @@map("approval_requests")
+}
+
+model ApprovalStep {
+  id                String    @id @default(uuid())
+  approvalRequestId String    @map("approval_request_id")
+  stepNumber        Int       @map("step_number")
+  roleName          String    @map("role_name")
+  status            String    @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "RETURNED"
+  actionBy          String?   @map("action_by")
+  actionAt          DateTime? @map("action_at")
+  comments          String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  request ApprovalRequest @relation(fields: [approvalRequestId], references: [id], onDelete: Cascade)
+  actor   User?           @relation(fields: [actionBy], references: [id])
+
+  @@map("approval_steps")
+}
+
+model SalaryStructure {
+  id              String   @id @default(uuid())
+  companyId       String   @map("company_id")
+  employeeId      String   @map("employee_id")
+  basic           Float    @default(0.0)
+  hra             Float    @default(0.0)
+  conveyance      Float    @default(0.0)
+  medical         Float    @default(0.0)
+  special         Float    @default(0.0)
+  pf              Float    @default(0.0)
+  professionalTax Float    @default(0.0) @map("professional_tax")
+  tds             Float    @default(0.0)
+  effectiveDate   DateTime @map("effective_date")
+  status          String   @default("ACTIVE") // "ACTIVE", "INACTIVE"
+  createdBy       String   @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  company  Company  @relation(fields: [companyId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@map("salary_structures")
+}
+
+model Payroll {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  payrollNo String   @unique @map("payroll_no")
+  month     Int
+  year      Int
+  status    String   @default("DRAFT") // "DRAFT", "APPROVED", "PAID", "CANCELLED"
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  payrollItems PayrollItem[]
+
+  @@unique([companyId, month, year])
+  @@map("payrolls")
+}
+
+model PayrollItem {
+  id              String    @id @default(uuid())
+  payrollId       String    @map("payroll_id")
+  employeeId      String    @map("employee_id")
+  basic           Float
+  hra             Float
+  conveyance      Float
+  medical         Float
+  special         Float
+  pf              Float
+  professionalTax Float     @map("professional_tax")
+  tds             Float
+  grossEarnings   Float     @map("gross_earnings")
+  totalDeductions Float     @map("total_deductions")
+  netSalary       Float     @map("net_salary")
+  status          String    @default("PENDING") // "PENDING", "PAID"
+  paidAccountId   String?   @map("paid_account_id")
+  paidAt          DateTime? @map("paid_at")
+  transactionId   String?   @map("transaction_id")
+
+  payroll      Payroll       @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  employee     Employee      @relation(fields: [employeeId], references: [id])
+  account      Account?      @relation(fields: [paidAccountId], references: [id])
+  transactions Transaction[]
+
+  @@map("payroll_items")
+}
+
+model Advance {
+  id                String    @id @default(uuid())
+  companyId         String    @map("company_id")
+  advanceNo         String    @unique @map("advance_no")
+  employeeId        String    @map("employee_id")
+  amount            Float
+  purpose           String
+  dateNeeded        DateTime  @map("date_needed")
+  status            String    @default("DRAFT") // DRAFT, SUBMITTED, UNDER_REVIEW, RETURNED_FOR_CORRECTION, APPROVED, REJECTED, DISBURSED, SETTLEMENT_PENDING, SETTLED
+  outstandingAmount Float     @default(0.0) @map("outstanding_amount")
+  disburseAccountId String?   @map("disburse_account_id")
+  disbursedAt       DateTime? @map("disbursed_at")
+  createdBy         String    @map("created_by")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  company         Company             @relation(fields: [companyId], references: [id])
+  employee        Employee            @relation(fields: [employeeId], references: [id])
+  creator         User                @relation("AdvanceCreator", fields: [createdBy], references: [id])
+  disburseAccount Account?            @relation("AdvanceDisbursements", fields: [disburseAccountId], references: [id])
+  settlements     AdvanceSettlement[]
+  transactions    Transaction[]
+
+  @@map("advances")
+}
+
+model AdvanceSettlement {
+  id          String   @id @default(uuid())
+  advanceId   String   @map("advance_id")
+  categoryId  String   @map("category_id")
+  amount      Float
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  advance  Advance         @relation(fields: [advanceId], references: [id], onDelete: Cascade)
+  category ExpenseCategory @relation(fields: [categoryId], references: [id])
+
+  @@map("advance_settlements")
+}
+
+model EmployeeBankAccount {
+  id              String    @id @default(uuid())
+  companyId       String    @map("company_id")
+  employeeId      String    @map("employee_id")
+  bankName        String    @map("bank_name")
+  accountHolder   String    @map("account_holder")
+  accountNumber   String    @map("account_number")
+  ifsc            String
+  branchName      String?   @map("branch_name")
+  proofFile       String?   @map("proof_file")
+  status          String    @default("PENDING_VERIFICATION") // PENDING_VERIFICATION, VERIFIED, REJECTED
+  rejectionReason String?   @map("rejection_reason")
+  verifiedBy      String?   @map("verified_by")
+  verifiedAt      DateTime? @map("verified_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  company  Company  @relation(fields: [companyId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  verifier User?    @relation("BankVerifier", fields: [verifiedBy], references: [id])
+
+  @@map("employee_bank_accounts")
+}
+
+model LeaveType {
+  id                 String   @id @default(uuid())
+  companyId          String   @map("company_id")
+  name               String
+  code               String
+  description        String?
+  isPaid             Boolean  @default(true) @map("is_paid")
+  annualQuota        Float    @default(12) @map("annual_quota")
+  maxConsecutiveDays Int?     @map("max_consecutive_days")
+  allowHalfDay       Boolean  @default(true) @map("allow_half_day")
+  allowCarryForward  Boolean  @default(false) @map("allow_carry_forward")
+  carryForwardLimit  Float?   @map("carry_forward_limit")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  company       Company        @relation(fields: [companyId], references: [id])
+  leaveBalances LeaveBalance[]
+  leaveRequests LeaveRequest[]
+
+  @@unique([companyId, code])
+  @@map("leave_types")
+}
+
+model LeavePolicy {
+  id                    String   @id @default(uuid())
+  companyId             String   @map("company_id")
+  name                  String   @default("Default Leave Policy")
+  year                  Int      @default(2026)
+  workingDaysOnly       Boolean  @default(true) @map("working_days_only")
+  excludeWeekends       Boolean  @default(true) @map("exclude_weekends")
+  excludeHolidays       Boolean  @default(true) @map("exclude_holidays")
+  advanceNoticeDays     Int      @default(0) @map("advance_notice_days")
+  maxConsecutiveDays    Int?     @map("max_consecutive_days")
+  allowNegativeBalance Boolean  @default(false) @map("allow_negative_balance")
+  autoApprove           Boolean  @default(false) @map("auto_approve")
+  customRules           String?  @map("custom_rules")
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("leave_policies")
+}
+
+model LeaveBalance {
+  id              String   @id @default(uuid())
+  companyId       String   @map("company_id")
+  employeeId      String   @map("employee_id")
+  leaveTypeId     String   @map("leave_type_id")
+  year            Int      @default(2026)
+  allocated       Float    @default(0.0)
+  used            Float    @default(0.0)
+  pending         Float    @default(0.0)
+  remaining       Float    @default(0.0)
+  carriedForward  Float    @default(0.0) @map("carried_forward")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  company   Company   @relation(fields: [companyId], references: [id])
+  employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@map("leave_balances")
+}
+
+model LeaveRequest {
+  id                String    @id @default(uuid())
+  companyId         String    @map("company_id")
+  leaveNo           String?   @unique @map("leave_no")
+  employeeId        String    @map("employee_id")
+  leaveTypeId       String    @map("leave_type_id")
+  fromDate          DateTime  @map("from_date")
+  toDate            DateTime  @map("to_date")
+  totalDays         Float     @map("total_days")
+  dayType           String    @default("FULL_DAY") @map("day_type") // FULL_DAY, HALF_DAY
+  reason            String
+  attachment        String?
+  status            String    @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  appliedAt         DateTime  @default(now()) @map("applied_at")
+  approvedAt        DateTime? @map("approved_at")
+  approvedBy        String?   @map("approved_by")
+  rejectedAt        DateTime? @map("rejected_at")
+  rejectedBy        String?   @map("rejected_by")
+  rejectionReason   String?   @map("rejection_reason")
+  cancelledAt       DateTime? @map("cancelled_at")
+  cancelledBy       String?   @map("cancelled_by")
+  cancellationReason String?  @map("cancellation_reason")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  company        Company         @relation(fields: [companyId], references: [id])
+  employee       Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType      LeaveType       @relation(fields: [leaveTypeId], references: [id])
+  approver       User?           @relation("LeaveApprover", fields: [approvedBy], references: [id])
+  rejector       User?           @relation("LeaveRejector", fields: [rejectedBy], references: [id])
+  canceller      User?           @relation("LeaveCanceller", fields: [cancelledBy], references: [id])
+  leaveApprovals LeaveApproval[]
+
+  @@map("leave_requests")
+}
+
+model LeaveApproval {
+  id             String   @id @default(uuid())
+  leaveRequestId String   @map("leave_request_id")
+  approverId     String   @map("approver_id")
+  action         String   // APPROVED, REJECTED
+  comments       String?
+  actionAt       DateTime @default(now()) @map("action_at")
+
+  leaveRequest LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  approver     User         @relation(fields: [approverId], references: [id])
+
+  @@map("leave_approvals")
+}
+
+model Holiday {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  name        String
+  date        DateTime
+  description String?
+  isOptional  Boolean  @default(false) @map("is_optional")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("holidays")
+}

@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# SQLite Database files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+prisma/*.db
+
+# Uploads & Media
+uploads/*
+!uploads/.gitkeep
+
+# System & IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Scratch scripts & temporary downloads
+scratch/
+**/scratch/
+*.exe
+*.crdownload
+.agents/

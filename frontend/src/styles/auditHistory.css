@@ -1,0 +1,163 @@
+/* ─────────────────────────────────────────────────────────
+   Audit History Page — auditHistory.css
+   ───────────────────────────────────────────────────────── */
+
+.aud-root {
+  padding: 28px 32px;
+  min-height: 100vh;
+  background: var(--bg-primary, #0f1117);
+  color: var(--text-primary, #f0f2f5);
+  font-family: 'Inter', 'Outfit', sans-serif;
+}
+
+/* Header */
+.aud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+.aud-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #a78bfa, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 4px;
+}
+.aud-subtitle { font-size: 0.85rem; color: #9ca3af; margin: 0; }
+
+.aud-btn-refresh {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #a78bfa;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.aud-btn-refresh:hover { background: rgba(167,139,250,0.15); }
+
+/* Stats */
+.aud-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.aud-stat-card {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.aud-stat-label { font-size: 0.72rem; color: #9ca3af; font-weight: 700; letter-spacing: 0.05em; }
+.aud-stat-val { font-size: 1.5rem; font-weight: 800; color: #f0f2f5; }
+.aud-val-green { color: #10b981; }
+.aud-val-purple { color: #a78bfa; }
+
+/* Filters */
+.aud-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.aud-filters input, .aud-filters select {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #f0f2f5;
+  font-size: 0.88rem;
+  outline: none;
+}
+.aud-filters input { flex: 1; }
+.aud-filters select option { background: #1a1d27; }
+
+/* Table */
+.aud-table-wrapper {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  overflow-x: auto;
+}
+.aud-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.aud-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+.aud-row { cursor: pointer; transition: background 0.15s; }
+.aud-row:hover { background: rgba(255,255,255,0.03); }
+.aud-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #e2e8f0; }
+
+.aud-time { font-size: 0.8rem; color: #9ca3af; }
+.aud-user { font-size: 0.88rem; color: #f0f2f5; }
+.aud-rec-id { font-family: monospace; color: #a78bfa; font-weight: 600; font-size: 0.82rem; }
+.aud-ip { font-family: monospace; color: #64748b; font-size: 0.78rem; }
+.aud-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.aud-btn-inspect {
+  background: rgba(167,139,250,0.1);
+  color: #a78bfa;
+  border: 1px solid rgba(167,139,250,0.3);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.aud-btn-inspect:hover { background: rgba(167,139,250,0.2); }
+
+/* Pagination */
+.aud-pagination {
+  display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 20px; font-size: 0.85rem; color: #9ca3af;
+}
+.aud-pagination button {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #f0f2f5; padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; cursor: pointer;
+}
+.aud-pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Overlay & Drawer */
+.aud-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.aud-drawer {
+  background: #1a1d27; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; width: 100%; max-width: 650px; max-height: 85vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+}
+.aud-drawer-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.aud-drawer-header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.aud-drawer-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+
+.aud-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.aud-meta-grid > div { display: flex; flex-direction: column; gap: 3px; }
+.aud-meta-grid label { font-size: 0.72rem; color: #6b7280; text-transform: uppercase; font-weight: 600; }
+.aud-meta-grid span { font-size: 0.88rem; color: #e2e8f0; }
+.aud-grid-full { grid-column: 1 / -1; }
+
+.aud-payload-section { display: flex; flex-direction: column; gap: 14px; }
+.aud-json-box { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; }
+.aud-json-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 8px; }
+.aud-json-box pre { margin: 0; font-family: monospace; font-size: 0.8rem; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+
+.aud-close { background: none; border: none; color: #9ca3af; font-size: 1.1rem; cursor: pointer; }
+.aud-empty { padding: 48px; text-align: center; color: #6b7280; font-size: 0.9rem; }
+.aud-loading { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
+.aud-spinner { width: 40px; height: 40px; border: 3px solid rgba(167,139,250,0.2); border-top-color: #a78bfa; border-radius: 50%; animation: aud-spin 0.7s linear infinite; }
+@keyframes aud-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  .aud-root { padding: 16px; }
+  .aud-stats { grid-template-columns: 1fr; }
+  .aud-filters { flex-direction: column; }
+  .aud-meta-grid { grid-template-columns: 1fr; }
+}

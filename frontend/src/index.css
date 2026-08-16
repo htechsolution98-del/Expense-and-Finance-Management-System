@@ -1,0 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --primary: #10B981;
+  --primary-hover: #059669;
+  --sidebar: #0F172A;
+  --sidebar-active-bg: #064E3B;
+  --sidebar-active-text: #10B981;
+  --sidebar-text: #94A3B8;
+  --sidebar-hover-text: #FFFFFF;
+  --header-bg: #FFFFFF;
+  --header-text: #0F172A;
+  --header-border: #E2E8F0;
+  --background: #F8FAFC;
+  --card: #FFFFFF;
+  --card-border: #E2E8F0;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --border: #E2E8F0;
+  
+  /* Status Colors */
+  --success: #16A34A;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+  --outstanding: #F97316;
+  --info: #3B82F6;
+  --loss: #DC2626;
+  
+  --footer-bg: #0F172A;
+  --footer-text: #CBD5E1;
+}
+
+@theme {
+  --font-sans: 'Outfit', sans-serif;
+  --color-bg-dark: var(--background);
+  --color-card-dark: var(--card);
+  --color-border-glow: var(--card-border);
+  --color-accent-indigo: var(--primary);
+  --color-accent-violet: var(--primary-hover);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Custom utility classes redefined for light SaaS theme */
+.glass-panel {
+  background: var(--card) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.025);
+  color: var(--text-primary) !important;
+}
+
+.glass-panel-glow {
+  background: var(--card) !important;
+  border: 1px solid var(--primary) !important;
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.05), 0 4px 6px -2px rgba(16, 185, 129, 0.025);
+  color: var(--text-primary) !important;
+}
+
+/* Global Form Fields Overrides */
+input, select, textarea {
+  background-color: #FFFFFF !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-primary) !important;
+  border-radius: 8px !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1) !important;
+}
+input::placeholder, textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Map Indigo buttons/gradients to Emerald Green theme */
+.bg-gradient-to-r.from-indigo-500, .bg-gradient-to-tr.from-indigo-500 {
+  background-image: linear-gradient(to right, var(--primary), var(--primary-hover)) !important;
+}
+.hover\:from-indigo-600:hover {
+  background-image: linear-gradient(to right, var(--primary-hover), var(--primary-hover)) !important;
+}
+.bg-indigo-600 {
+  background-color: var(--primary) !important;
+}
+.bg-indigo-600:hover {
+  background-color: var(--primary-hover) !important;
+}
+.text-indigo-400 {
+  color: var(--primary) !important;
+}
+.text-indigo-300 {
+  color: var(--primary-hover) !important;
+}
+.border-indigo-500\/30 {
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+.bg-indigo-500\/10 {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+}
+.text-indigo-500 {
+  color: var(--primary) !important;
+}
+
+/* Typography Headings, Paragraphs, Cards and Tables Overrides */
+main h1, main h2, main h3, main h4, main h5, main h6 {
+  color: var(--text-primary) !important;
+}
+main p, main .text-gray-400, main .text-gray-500, main .text-slate-400, main .text-slate-500 {
+  color: var(--text-secondary) !important;
+}
+main div.text-white, main span.text-white, main p.text-white,
+main div.text-gray-300, main span.text-gray-300, main p.text-gray-300 {
+  color: var(--text-primary) !important;
+}
+/* Allow badge text to be colored */
+span.bg-indigo-500\/10.text-indigo-300 {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  color: var(--primary) !important;
+}
+
+table {
+  color: var(--text-primary) !important;
+}
+thead th {
+  background-color: #f1f5f9 !important;
+  color: var(--text-secondary) !important;
+  border-bottom: 1.5px solid var(--border) !important;
+}
+tbody tr {
+  border-bottom: 1px solid var(--border) !important;
+  background-color: transparent !important;
+}
+tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Stylesheets Module Overrides (for reports, advances, employeePortal, auditHistory) */
+.adv-root, .rep-root, .emp-root, .aud-root {
+  background: var(--background) !important;
+  color: var(--text-primary) !important;
+}
+
+.adv-title, .rep-title, .emp-title, .aud-title {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover)) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: var(--primary) !important;
+}
+
+.adv-subtitle, .rep-subtitle, .emp-subtitle, .aud-subtitle {
+  color: var(--text-secondary) !important;
+}
+
+.adv-table-wrapper, .rep-card, .adv-card, .emp-card, .aud-card, .rep-card h3 {
+  background: var(--card) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+  color: var(--text-primary) !important;
+}
+
+.adv-table th, .rep-table th, .emp-table th, .aud-table th {
+  background: #f1f5f9 !important;
+  color: var(--text-secondary) !important;
+  border-bottom: 1.5px solid var(--border) !important;
+}
+
+.adv-cell, .rep-table td, .emp-table td, .aud-table td {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.adv-row:hover, .rep-table tr:hover, .emp-table tr:hover {
+  background: #f8fafc !important;
+}
+
+.adv-stat-pill {
+  background: var(--card) !important;
+  border-color: var(--card-border) !important;
+  color: var(--text-primary) !important;
+}
+
+.rep-kpi-card {
+  background: var(--card) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+.rep-kpi-green  { border-left: 4px solid var(--success) !important; }
+.rep-kpi-purple { border-left: 4px solid var(--info) !important; }
+.rep-kpi-amber  { border-left: 4px solid var(--warning) !important; }
+.rep-kpi-pink   { border-left: 4px solid var(--danger) !important; }
+.rep-kpi-val {
+  color: var(--text-primary) !important;
+}
+
+.rep-mode-pill {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: var(--primary) !important;
+}
+.rep-cat-amt, .rep-progress-fill {
+  background: linear-gradient(90deg, var(--primary), var(--primary-hover)) !important;
+  color: var(--primary) !important;
+}
+.rep-tab.active {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: var(--primary) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+.animate-pulse-slow {
+  animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+

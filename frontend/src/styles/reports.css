@@ -1,0 +1,177 @@
+/* ─────────────────────────────────────────────────────────
+   Reports Dashboard — reports.css
+   ───────────────────────────────────────────────────────── */
+
+.rep-root {
+  padding: 28px 32px;
+  min-height: 100vh;
+  background: var(--bg-primary, #0f1117);
+  color: var(--text-primary, #f0f2f5);
+  font-family: 'Inter', 'Outfit', sans-serif;
+}
+
+/* Header */
+.rep-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+.rep-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #a78bfa, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 4px;
+}
+.rep-subtitle { font-size: 0.85rem; color: #9ca3af; margin: 0; }
+
+.rep-export-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.rep-btn-export {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #a78bfa;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.rep-btn-export:hover { background: rgba(167,139,250,0.15); border-color: #a78bfa; }
+
+/* KPI Grid */
+.rep-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.rep-kpi-card {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.rep-kpi-green  { border-left: 4px solid #10b981; }
+.rep-kpi-purple { border-left: 4px solid #8b5cf6; }
+.rep-kpi-amber  { border-left: 4px solid #f59e0b; }
+.rep-kpi-pink   { border-left: 4px solid #ec4899; }
+
+.rep-kpi-label { font-size: 0.72rem; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; }
+.rep-kpi-val   { font-size: 1.7rem; font-weight: 800; color: #f0f2f5; margin: 8px 0 4px; }
+.rep-kpi-sub   { font-size: 0.76rem; color: #6b7280; }
+
+/* Tabs */
+.rep-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 10px;
+  overflow-x: auto;
+}
+.rep-tab {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.rep-tab:hover { color: #f0f2f5; background: rgba(255,255,255,0.04); }
+.rep-tab.active {
+  background: rgba(167,139,250,0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(167,139,250,0.3);
+}
+
+/* Cards & Layout */
+.rep-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.rep-card {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 20px 24px;
+}
+.rep-card h3 { margin: 0 0 16px; font-size: 1rem; font-weight: 700; color: #f0f2f5; }
+
+/* Accounts & Payment Modes */
+.rep-acc-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.rep-acc-name { font-weight: 600; font-size: 0.88rem; color: #f0f2f5; }
+.rep-acc-type { font-size: 0.72rem; color: #6b7280; font-weight: 600; }
+.rep-acc-bal  { font-weight: 700; color: #10b981; font-size: 0.95rem; }
+
+.rep-mode-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.rep-mode-pill { background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; color: #a78bfa; }
+.rep-mode-vals { display: flex; gap: 14px; font-weight: 600; font-size: 0.85rem; }
+
+/* Category Progress Bars */
+.rep-cat-row { margin-bottom: 14px; }
+.rep-cat-header { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px; }
+.rep-cat-title { font-weight: 600; color: #f0f2f5; }
+.rep-cat-amt   { font-weight: 700; color: #a78bfa; }
+.rep-progress-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; }
+.rep-progress-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #3b82f6); border-radius: 999px; }
+
+/* Table */
+.rep-table-wrapper { overflow-x: auto; margin-top: 8px; }
+.rep-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.rep-table th { padding: 10px 12px; text-align: left; font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.rep-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #e2e8f0; }
+
+.rep-tx-no { font-family: monospace; color: #a78bfa; font-weight: 600; }
+.rep-cat-name { color: #60a5fa; }
+.rep-purpose  { max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #9ca3af; }
+.rep-type-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.rep-type-pill.in  { background: rgba(16,185,129,0.15); color: #10b981; }
+.rep-type-pill.out { background: rgba(139,92,246,0.15); color: #8b5cf6; }
+
+/* Text Utility Colours */
+.text-green  { color: #10b981 !important; }
+.text-purple { color: #8b5cf6 !important; }
+.text-amber  { color: #f59e0b !important; }
+.text-center { text-align: center; color: #6b7280; padding: 24px 0; }
+.font-bold   { font-weight: 700; }
+.mt-6        { margin-top: 24px; }
+
+/* Loan Card */
+.rep-loan-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+.rep-loan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.9rem; }
+.rep-loan-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.rep-loan-grid label { font-size: 0.7rem; color: #6b7280; text-transform: uppercase; font-weight: 600; display: block; }
+.rep-loan-grid span { font-size: 0.85rem; font-weight: 700; }
+
+.rep-metric-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.9rem; }
+.rep-metric-row label { color: #9ca3af; font-weight: 600; }
+.rep-metric-row span { font-weight: 700; }
+
+.rep-empty { padding: 32px; text-align: center; color: #6b7280; font-size: 0.88rem; }
+.rep-loading { display: flex; justify-content: center; align-items: center; min-height: 60vh; }
+.rep-spinner { width: 40px; height: 40px; border: 3px solid rgba(167,139,250,0.2); border-top-color: #a78bfa; border-radius: 50%; animation: rep-spin 0.7s linear infinite; }
+@keyframes rep-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  .rep-root { padding: 16px; }
+  .rep-header { flex-direction: column; gap: 12px; }
+  .rep-card-grid { grid-template-columns: 1fr; }
+  .rep-loan-grid { grid-template-columns: 1fr 1fr; }
+}
