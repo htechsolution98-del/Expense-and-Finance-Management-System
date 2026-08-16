@@ -206,10 +206,22 @@ const permissionCategories = [
         setShowExtraPermsModal(true);
         setExtraPermsLoading(true);
         try {
-          const res = await api.get(`/users/${user.id}/extra-permissions`);
-          setExtraPermsSelected(res.data.data.extraPermissions || []);
+          // Load both the user's extra permissions and their role's base permissions
+          const [extraRes] = await Promise.all([
+            api.get(`/users/${user.id}/extra-permissions`),
+          ]);
+          setExtraPermsSelected(extraRes.data.data.extraPermissions || []);
+
+          // Set the role permissions to the target user's role so "Inherited from Role" is accurate
+          const userRole = roles.find((r) => r.name === user.role);
+          if (userRole) {
+            setRolePermissions(userRole.permissions);
+          } else {
+            setRolePermissions([]);
+          }
         } catch {
           setExtraPermsSelected([]);
+          setRolePermissions([]);
         } finally {
           setExtraPermsLoading(false);
         }
@@ -229,7 +241,21 @@ const permissionCategories = [
           await api.put(`/users/${extraPermsTargetUser.id}/extra-permissions`, {
             permissions: extraPermsSelected,
           });
-          setExtraPermsMessage({ text: 'Extra permissions saved! User permissions will refresh on their next page navigation.', type: 'success' });
+
+          // If the saved user is the currently logged-in user, refresh their localStorage
+          // so new permissions take effect without logout
+          try {
+            const meRes = await api.get('/auth/me');
+            if (meRes.data?.success && meRes.data?.data?.user) {
+              localStorage.setItem('user', JSON.stringify(meRes.data.data.user));
+              // Notify Sidebar and ProtectedRoute to re-read permissions
+              window.dispatchEvent(new Event('user-permissions-updated'));
+            }
+          } catch {
+            // If /auth/me fails, silently ignore — permissions will update on next navigation
+          }
+
+          setExtraPermsMessage({ text: 'Extra permissions saved! Permissions are now active.', type: 'success' });
         } catch (err: any) {
           setExtraPermsMessage({ text: err.response?.data?.message || 'Failed to save permissions.', type: 'error' });
         } finally {
