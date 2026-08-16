@@ -118,7 +118,7 @@ export const Sidebar: React.FC = () => {
       path: '/ledger',
       icon: <BookOpen className="w-5 h-5" />,
       enabled: true,
-      visible: hasPermission(['REPORT_VIEW'])
+      visible: user.role === 'SUPER_ADMIN' || user.permissions?.includes('*')
     },
     {
       name: 'Reports & Analytics',
@@ -153,14 +153,14 @@ export const Sidebar: React.FC = () => {
       path: '/advances',
       icon: <Banknote className="w-5 h-5" />,
       enabled: true,
-      visible: isAdmin && hasPermission(['ADVANCE_VIEW', 'ADVANCE_CREATE', 'ADVANCE_APPROVE'])
+      visible: hasPermission(['ADVANCE_VIEW', 'ADVANCE_CREATE', 'ADVANCE_APPROVE'])
     },
     {
       name: 'Leave Management',
       path: '/leaves',
       icon: <Calendar className="w-5 h-5" />,
       enabled: true,
-      visible: hasPermission(['LEAVE_VIEW', 'LEAVE_APPLY', 'LEAVE_APPROVE', 'LEAVE_MANAGE'])
+      visible: true
     },
     {
       name: 'Employee Portal',

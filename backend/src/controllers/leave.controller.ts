@@ -507,6 +507,10 @@ export const getLeaveBalances = async (req: Request, res: Response, next: NextFu
     }
 
     if (isAll) {
+      const allRequests = await prisma.leaveRequest.findMany({
+        where: { companyId },
+      });
+
       const balances = await prisma.leaveBalance.findMany({
         where: { companyId, year },
         include: {
@@ -515,7 +519,34 @@ export const getLeaveBalances = async (req: Request, res: Response, next: NextFu
         },
         orderBy: { employee: { name: 'asc' } },
       });
-      sendSuccess(res, 'All employee leave balances retrieved', balances);
+
+      const updatedBalances = await Promise.all(
+        balances.map(async (b) => {
+          const typeRequests = allRequests.filter(
+            (r) => r.employeeId === b.employeeId && r.leaveTypeId === b.leaveTypeId
+          );
+          const actualUsed = typeRequests
+            .filter((r) => r.status === 'APPROVED')
+            .reduce((sum, r) => sum + r.totalDays, 0);
+          const actualPending = typeRequests
+            .filter((r) => r.status === 'PENDING' || r.status === 'SUPER_APPROVED')
+            .reduce((sum, r) => sum + r.totalDays, 0);
+          const actualRemaining = Math.max(0, b.allocated + b.carriedForward - actualUsed - actualPending);
+
+          if (b.used !== actualUsed || b.pending !== actualPending || b.remaining !== actualRemaining) {
+            await prisma.leaveBalance.update({
+              where: { id: b.id },
+              data: { used: actualUsed, pending: actualPending, remaining: actualRemaining },
+            });
+            b.used = actualUsed;
+            b.pending = actualPending;
+            b.remaining = actualRemaining;
+          }
+          return b;
+        })
+      );
+
+      sendSuccess(res, 'All employee leave balances retrieved', updatedBalances);
       return;
     }
 
@@ -583,6 +614,10 @@ export const getLeaveBalances = async (req: Request, res: Response, next: NextFu
       });
     }
 
+    const allRequests = await prisma.leaveRequest.findMany({
+      where: { companyId, employeeId },
+    });
+
     const balances = await prisma.leaveBalance.findMany({
       where: {
         companyId,
@@ -595,7 +630,31 @@ export const getLeaveBalances = async (req: Request, res: Response, next: NextFu
       },
     });
 
-    sendSuccess(res, 'Employee leave balances retrieved', balances);
+    const updatedBalances = await Promise.all(
+      balances.map(async (b) => {
+        const typeRequests = allRequests.filter((r) => r.leaveTypeId === b.leaveTypeId);
+        const actualUsed = typeRequests
+          .filter((r) => r.status === 'APPROVED')
+          .reduce((sum, r) => sum + r.totalDays, 0);
+        const actualPending = typeRequests
+          .filter((r) => r.status === 'PENDING' || r.status === 'SUPER_APPROVED')
+          .reduce((sum, r) => sum + r.totalDays, 0);
+        const actualRemaining = Math.max(0, b.allocated + b.carriedForward - actualUsed - actualPending);
+
+        if (b.used !== actualUsed || b.pending !== actualPending || b.remaining !== actualRemaining) {
+          await prisma.leaveBalance.update({
+            where: { id: b.id },
+            data: { used: actualUsed, pending: actualPending, remaining: actualRemaining },
+          });
+          b.used = actualUsed;
+          b.pending = actualPending;
+          b.remaining = actualRemaining;
+        }
+        return b;
+      })
+    );
+
+    sendSuccess(res, 'Employee leave balances retrieved', updatedBalances);
   } catch (err) {
     next(err);
   }
@@ -923,9 +982,13 @@ export const getLeaveRequests = async (req: Request, res: Response, next: NextFu
 
     const { status, employeeId, leaveTypeId, fromDate, toDate } = req.query;
 
+    const isAccountsRole = userRole === 'ACCOUNTS' || userRole.startsWith('ACCOUNT');
+    const isAdminRole = userRole === 'ADMIN' || userRole.startsWith('ADMIN');
+
     const canViewAll =
       userRole === 'SUPER_ADMIN' ||
-      userRole === 'ADMIN' ||
+      isAdminRole ||
+      isAccountsRole ||
       userPermissions.includes('*') ||
       userPermissions.includes('LEAVE_MANAGE') ||
       userPermissions.includes('LEAVE_APPROVE');
@@ -958,7 +1021,25 @@ export const getLeaveRequests = async (req: Request, res: Response, next: NextFu
     const requests = await prisma.leaveRequest.findMany({
       where: whereClause,
       include: {
-        employee: { select: { id: true, name: true, employeeCode: true, department: { select: { name: true } } } },
+        employee: {
+          select: {
+            id: true,
+            name: true,
+            employeeCode: true,
+            department: { select: { name: true } },
+            users: {
+              select: {
+                userRoles: {
+                  select: {
+                    role: {
+                      select: { name: true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         leaveType: { select: { id: true, code: true, name: true, isPaid: true } },
         approver: { select: { id: true, name: true, email: true } },
         rejector: { select: { id: true, name: true, email: true } },
@@ -980,13 +1061,28 @@ export const approveLeave = async (req: Request, res: Response, next: NextFuncti
     const userRole = req.user!.role;
     const userPermissions = req.user!.permissions || [];
     const isSuperAdmin = userRole === 'SUPER_ADMIN' || userPermissions.includes('*');
+    const isAdmin = userRole === 'ADMIN' || userRole.startsWith('ADMIN') || isSuperAdmin;
+    const isAccounts = userRole === 'ACCOUNTS' || userRole.startsWith('ACCOUNT');
 
     const { id } = req.params;
     const { comments } = req.body;
 
     const leaveReq = await prisma.leaveRequest.findFirst({
       where: { id, companyId },
-      include: { leaveType: true },
+      include: {
+        leaveType: true,
+        employee: {
+          include: {
+            users: {
+              include: {
+                userRoles: {
+                  include: { role: true }
+                }
+              }
+            }
+          }
+        }
+      },
     });
 
     if (!leaveReq) {
@@ -998,42 +1094,108 @@ export const approveLeave = async (req: Request, res: Response, next: NextFuncti
     }
 
     const year = leaveReq.fromDate.getFullYear();
+    const applicantRole = (leaveReq.employee?.users[0]?.userRoles[0]?.role?.name || 'STAFF').toUpperCase();
+    const isApplicantAccounts = applicantRole === 'ACCOUNTS' || applicantRole.startsWith('ACCOUNT');
+    const isApplicantAdmin = applicantRole === 'ADMIN' || applicantRole.startsWith('ADMIN');
 
-    // Multistage Approval Logic:
-    // If totalDays > 1:
-    //   Stage 1: Must be approved by Super Admin -> Status becomes SUPER_APPROVED
-    //   Stage 2: Must be approved by Admin -> Status becomes APPROVED
-    // If totalDays <= 1:
-    //   Directly approved by Admin or Super Admin -> Status becomes APPROVED
+    // ─── Applicant-Aware Tiered Approval Matrix ───────────────────────────────
+    // 1. Account I Applicant:
+    //    - 1-Day Leave (<= 1 day): Must be approved by ADMIN.
+    //    - > 1-Day Leave (> 1 day): Must be approved by SUPER_ADMIN.
+    // 2. Staff / General Employee Applicant:
+    //    - 1-Day Leave (<= 1 day): Must be approved by ACCOUNTS / ACCOUNT_I.
+    //    - 1 to 2 Days Leave (1 < totalDays <= 2): Must be approved by ADMIN.
+    //    - > 2 Days Leave (> 2 days): Stage 1 SUPER_ADMIN -> Stage 2 ADMIN.
 
-    if (leaveReq.totalDays > 1 && leaveReq.status === 'PENDING') {
-      if (!isSuperAdmin) {
-        throw new ForbiddenError('Leave requests greater than 1 day require Super Admin approval first.');
+    if (isApplicantAccounts) {
+      if (leaveReq.totalDays <= 1) {
+        if (!isAdmin && !isSuperAdmin) {
+          throw new ForbiddenError('1-day leave requests taken by Account I must be approved by Admin role.');
+        }
+      } else {
+        // >1 day leave taken by Account I: Stage 1 Super Admin -> Stage 2 Admin
+        if (leaveReq.status === 'PENDING') {
+          if (!isSuperAdmin) {
+            throw new ForbiddenError('Leave requests >1 day taken by Account I require Super Admin Stage-1 approval first.');
+          }
+
+          const result = await prisma.$transaction(async (tx) => {
+            const updatedReq = await tx.leaveRequest.update({
+              where: { id },
+              data: {
+                status: 'SUPER_APPROVED',
+              },
+            });
+
+            await tx.leaveApproval.create({
+              data: {
+                leaveRequestId: id,
+                approverId: userId,
+                action: 'SUPER_APPROVED',
+                comments: comments || 'Stage 1 approved by Super Admin. Pending final Admin approval.',
+              },
+            });
+
+            return updatedReq;
+          });
+
+          sendSuccess(res, 'Stage 1 approved by Super Admin. Awaiting final Admin approval.', result);
+          return;
+        } else if (leaveReq.status === 'SUPER_APPROVED') {
+          if (!isAdmin && !isSuperAdmin) {
+            throw new ForbiddenError('Final approval for Account I >1 day leaves requires Admin role.');
+          }
+        }
       }
+    } else if (isApplicantAdmin) {
+      if (!isSuperAdmin) {
+        throw new ForbiddenError('Leave requests taken by Admin must be approved by Super Admin role.');
+      }
+    } else {
+      // Staff / Employee Applicant
+      if (leaveReq.totalDays <= 1) {
+        if (!isAccounts && !isSuperAdmin) {
+          throw new ForbiddenError('1-day leave requests taken by staff must be approved by Account I / Accounts role.');
+        }
+      } else if (leaveReq.totalDays > 1 && leaveReq.totalDays <= 2) {
+        if (!isAdmin && !isSuperAdmin) {
+          throw new ForbiddenError('Leave requests for 1 to 2 days must be approved by Admin role.');
+        }
+      } else if (leaveReq.totalDays > 2) {
+        if (leaveReq.status === 'PENDING') {
+          if (!isSuperAdmin) {
+            throw new ForbiddenError('Leave requests greater than 2 days require Super Admin Stage-1 approval first.');
+          }
 
-      // Stage 1 Approval by Super Admin
-      const result = await prisma.$transaction(async (tx) => {
-        const updatedReq = await tx.leaveRequest.update({
-          where: { id },
-          data: {
-            status: 'SUPER_APPROVED',
-          },
-        });
+          // Stage 1 Approval by Super Admin
+          const result = await prisma.$transaction(async (tx) => {
+            const updatedReq = await tx.leaveRequest.update({
+              where: { id },
+              data: {
+                status: 'SUPER_APPROVED',
+              },
+            });
 
-        await tx.leaveApproval.create({
-          data: {
-            leaveRequestId: id,
-            approverId: userId,
-            action: 'SUPER_APPROVED',
-            comments: comments || 'Stage 1 approved by Super Admin. Pending final Admin approval.',
-          },
-        });
+            await tx.leaveApproval.create({
+              data: {
+                leaveRequestId: id,
+                approverId: userId,
+                action: 'SUPER_APPROVED',
+                comments: comments || 'Stage 1 approved by Super Admin. Pending final Admin approval.',
+              },
+            });
 
-        return updatedReq;
-      });
+            return updatedReq;
+          });
 
-      sendSuccess(res, 'Stage 1 approved by Super Admin. Awaiting final Admin approval.', result);
-      return;
+          sendSuccess(res, 'Stage 1 approved by Super Admin. Awaiting final Admin approval.', result);
+          return;
+        } else if (leaveReq.status === 'SUPER_APPROVED') {
+          if (!isAdmin && !isSuperAdmin) {
+            throw new ForbiddenError('Final approval for >2 day leaves requires Admin role.');
+          }
+        }
+      }
     }
 
     // Final Approval (either totalDays <= 1 OR status === 'SUPER_APPROVED')

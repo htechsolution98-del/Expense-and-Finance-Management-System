@@ -25,22 +25,71 @@ router.use(authenticate);
 router.use(tenantScopeMiddleware);
 
 // Categories
-router.get('/categories', authorize('EXPENSE_VIEW'), getCategories);
+router.get('/categories', getCategories);
 router.post('/categories', (req, res, next) => {
   const role = req.user!.role;
-  if (role === 'SUPER_ADMIN' || role === 'ACCOUNTS' || role.startsWith('ACCOUNT')) {
+  const perms = req.user!.permissions || [];
+  if (
+    role === 'SUPER_ADMIN' ||
+    role === 'ADMIN' ||
+    role === 'ACCOUNTS' ||
+    role.startsWith('ACCOUNT') ||
+    role.startsWith('ADMIN') ||
+    perms.includes('*') ||
+    perms.includes('EXPENSE_APPROVE')
+  ) {
     next();
   } else {
     res.status(403).json({
       success: false,
-      message: 'Only Super Admin and Accounts roles can create expense categories',
+      message: 'Only Super Admin, Admin, and Accounts roles can create expense categories',
       code: 'FORBIDDEN',
       errors: []
     });
   }
 }, createCategory);
-router.put('/categories/:id', authorize('SUPER_ADMIN_ONLY'), updateCategory);
-router.delete('/categories/:id', authorize('SUPER_ADMIN_ONLY'), deleteCategory);
+router.put('/categories/:id', (req, res, next) => {
+  const role = req.user!.role;
+  const perms = req.user!.permissions || [];
+  if (
+    role === 'SUPER_ADMIN' ||
+    role === 'ADMIN' ||
+    role === 'ACCOUNTS' ||
+    role.startsWith('ACCOUNT') ||
+    role.startsWith('ADMIN') ||
+    perms.includes('*')
+  ) {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      message: 'Only Super Admin, Admin, and Accounts roles can edit expense categories',
+      code: 'FORBIDDEN',
+      errors: []
+    });
+  }
+}, updateCategory);
+router.delete('/categories/:id', (req, res, next) => {
+  const role = req.user!.role;
+  const perms = req.user!.permissions || [];
+  if (
+    role === 'SUPER_ADMIN' ||
+    role === 'ADMIN' ||
+    role === 'ACCOUNTS' ||
+    role.startsWith('ACCOUNT') ||
+    role.startsWith('ADMIN') ||
+    perms.includes('*')
+  ) {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      message: 'Only Super Admin, Admin, and Accounts roles can delete expense categories',
+      code: 'FORBIDDEN',
+      errors: []
+    });
+  }
+}, deleteCategory);
 
 // Expenses Core Operations
 router.get('/', authorize('EXPENSE_VIEW'), getExpenses);

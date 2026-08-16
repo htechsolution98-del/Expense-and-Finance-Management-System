@@ -480,11 +480,13 @@ export const payPayrollItem = async (
         });
         const transactionNo = `${trxPrefix}-${(trxCount + 1).toString().padStart(4, '0')}`;
 
+        /*
         const vchPrefix = 'VCH-PAY';
         const vchCount = await tx.voucher.count({
           where: { companyId, voucherNo: { startsWith: vchPrefix } },
         });
         const voucherNo = `${vchPrefix}-${(vchCount + 1).toString().padStart(5, '0')}`;
+        */
 
         // 3. Create Transaction Ledger entry
         const transaction = await tx.transaction.create({
@@ -505,7 +507,8 @@ export const payPayrollItem = async (
           },
         });
 
-        // 4. Create Voucher
+        // 4. Create Voucher (Bypassed - User requested no vouchers for salary payouts)
+        /*
         await tx.voucher.create({
           data: {
             companyId,
@@ -513,6 +516,7 @@ export const payPayrollItem = async (
             transactionId: transaction.id,
           },
         });
+        */
 
         // 5. Update slip status
         const updatedItem = await tx.payrollItem.update({
@@ -624,11 +628,13 @@ export const payPayrollBatch = async (
           });
           const transactionNo = `${trxPrefix}-${(trxCount + 1).toString().padStart(4, '0')}`;
 
+          /*
           const vchPrefix = 'VCH-PAY';
           const vchCount = await tx.voucher.count({
             where: { companyId, voucherNo: { startsWith: vchPrefix } },
           });
           const voucherNo = `${vchPrefix}-${(vchCount + 1).toString().padStart(5, '0')}`;
+          */
 
           // Create Transaction
           const transaction = await tx.transaction.create({
@@ -649,7 +655,8 @@ export const payPayrollBatch = async (
             },
           });
 
-          // Create Voucher
+          // Create Voucher (Bypassed - User requested no vouchers for salary payouts)
+          /*
           await tx.voucher.create({
             data: {
               companyId,
@@ -657,6 +664,7 @@ export const payPayrollBatch = async (
               transactionId: transaction.id,
             },
           });
+          */
 
           // Update item status
           const updatedItem = await tx.payrollItem.update({

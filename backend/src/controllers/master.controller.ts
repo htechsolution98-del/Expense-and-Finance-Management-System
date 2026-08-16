@@ -128,7 +128,15 @@ export const getEmployees = async (
   try {
     const companyId = req.companyId!;
     const userRole = req.user!.role;
-    const hasViewPerm = req.user!.permissions.includes('USER_VIEW') || userRole === 'SUPER_ADMIN' || userRole === 'ADMIN';
+    const isAccounts = userRole === 'ACCOUNTS' || userRole.startsWith('ACCOUNT');
+    const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole.startsWith('ADMIN');
+    const hasViewPerm =
+      isAdmin ||
+      isAccounts ||
+      req.user!.permissions.includes('USER_VIEW') ||
+      req.user!.permissions.includes('SALARY_VIEW') ||
+      req.user!.permissions.includes('SALARY_MANAGE') ||
+      req.user!.permissions.includes('PAYROLL_MANAGE');
 
     let whereClause: any = { companyId };
     

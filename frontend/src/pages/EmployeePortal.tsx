@@ -723,7 +723,18 @@ export default function EmployeePortal() {
                 <div><label>Department</label><span>{selectedSlip.employee?.department?.name || 'General'}</span></div>
                 <div><label>Designation</label><span>{selectedSlip.employee?.designation?.name || 'Staff'}</span></div>
                 <div><label>Payment Date</label><span>{selectedSlip.paidAt ? fmtDate(selectedSlip.paidAt) : '—'}</span></div>
-                <div><label>Payment Status</label><span className="payslip-status-paid">PAID</span></div>
+                <div>
+                  <label>Payment Status</label>
+                  <span className={
+                    selectedSlip.status === 'PAID'
+                      ? 'payslip-status-paid'
+                      : selectedSlip.status === 'ON_HOLD'
+                      ? 'payslip-status-hold'
+                      : 'payslip-status-unpaid'
+                  }>
+                    {selectedSlip.status === 'ON_HOLD' ? 'ON HOLD' : selectedSlip.status}
+                  </span>
+                </div>
               </div>
 
               <div className="payslip-breakdown">

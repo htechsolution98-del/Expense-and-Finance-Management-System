@@ -57,8 +57,11 @@ const App: React.FC = () => {
               <Route path="/payments" element={<Payments />} />
             </Route>
             
-            <Route element={<ProtectedRoute requiredPermission="REPORT_VIEW" />}>
+            <Route element={<ProtectedRoute requiredPermission="SUPER_ADMIN_ONLY" />}>
               <Route path="/ledger" element={<Ledger />} />
+            </Route>
+
+            <Route element={<ProtectedRoute requiredPermission="REPORT_VIEW" />}>
               <Route path="/reports" element={<ReportsDashboard />} />
               <Route path="/audit" element={<AuditHistory />} />
             </Route>

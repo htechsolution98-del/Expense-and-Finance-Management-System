@@ -39,6 +39,11 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
               }
             }
           }
+        },
+        userPermissions: {
+          include: {
+            permission: true
+          }
         }
       }
     }).then((dbUser) => {
@@ -48,10 +53,14 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
       }
 
       const roleName = dbUser.userRoles[0]?.role.name || 'STAFF';
-      // Super Admin gets a wildcard '*' so stale DB rolePermission entries never block them
-      const permissions = roleName === 'SUPER_ADMIN'
+      const rolePermissions = dbUser.userRoles.flatMap((ur) =>
+        ur.role.rolePermissions.map((rp) => rp.permission.name)
+      );
+      const extraPermissions = dbUser.userPermissions.map((up) => up.permission.name);
+
+      const permissions = (roleName === 'SUPER_ADMIN' || rolePermissions.includes('*'))
         ? ['*']
-        : (dbUser.userRoles[0]?.role.rolePermissions.map((rp) => rp.permission.name) || []);
+        : Array.from(new Set([...rolePermissions, ...extraPermissions]));
 
       req.user = {
         id: dbUser.id,

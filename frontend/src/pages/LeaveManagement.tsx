@@ -81,6 +81,7 @@ interface LeaveRequest {
     name: string;
     employeeCode: string;
     department?: { name: string };
+    users?: { userRoles?: { role?: { name: string } }[] }[];
   };
   leaveType?: LeaveType;
   approver?: { name: string; email: string };
@@ -117,9 +118,16 @@ interface LeavePolicy {
 export const LeaveManagement: React.FC = () => {
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : { role: '', permissions: [] };
+  const userRole = (user.role || '').toUpperCase();
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  const isAdminRole = userRole === 'ADMIN' || userRole.startsWith('ADMIN');
+  const isAccountsRole = userRole === 'ACCOUNTS' || userRole.startsWith('ACCOUNT');
 
-  const isSuperAdmin = user.role === 'SUPER_ADMIN' || user.permissions?.includes('*');
-  const canApprove = isSuperAdmin || user.role === 'ADMIN' || user.permissions?.includes('LEAVE_APPROVE') || user.permissions?.includes('LEAVE_MANAGE');
+  const canApprove = isSuperAdmin ||
+    isAdminRole ||
+    isAccountsRole ||
+    user.permissions?.includes('LEAVE_APPROVE') ||
+    user.permissions?.includes('LEAVE_MANAGE');
   const canManagePolicy = isSuperAdmin || user.permissions?.includes('LEAVE_POLICY_MANAGE');
 
   const [activeTab, setActiveTab] = useState<'my_leaves' | 'approvals' | 'calendar' | 'balances' | 'settings' | 'holidays' | 'reports'>('my_leaves');
@@ -200,11 +208,11 @@ export const LeaveManagement: React.FC = () => {
     try {
       const balanceUrl = selectedEmployeeId ? `/leaves/balance?employeeId=${selectedEmployeeId}` : '/leaves/balance';
       const [typesRes, balancesRes, requestsRes, holidaysRes, policyRes] = await Promise.all([
-        api.get('/leaves/types'),
-        api.get(balanceUrl),
-        api.get('/leaves/requests'),
-        api.get('/leaves/holidays'),
-        api.get('/leaves/policy'),
+        api.get('/leaves/types').catch(() => ({ data: { data: [] } })),
+        api.get(balanceUrl).catch(() => ({ data: { data: [] } })),
+        api.get('/leaves/requests').catch(() => ({ data: { data: [] } })),
+        api.get('/leaves/holidays').catch(() => ({ data: { data: [] } })),
+        api.get('/leaves/policy').catch(() => ({ data: { data: [] } })),
       ]);
 
       setLeaveTypes(typesRes.data.data || []);
@@ -572,21 +580,85 @@ export const LeaveManagement: React.FC = () => {
     }
   };
 
-  // Filtered requests list
-  const filteredRequests = leaveRequests.filter((r) => {
+  // Helper to extract applicant role of a request
+  const getApplicantRole = (r: LeaveRequest) => {
+    const roleName = r.employee?.users?.[0]?.userRoles?.[0]?.role?.name || 'STAFF';
+    return roleName.toUpperCase();
+  };
+
+  // Role-scoped approval queue filtering:
+  // - Account I applicant: 1-day leave goes to Admin; >1 day leave goes to Super Admin.
+  // - Staff applicant: 1-day leave goes to Account I; 1-2 days to Admin; >2 days to Super Admin (Stage 1) -> Admin (Stage 2).
+  // - Admin applicant: goes to Super Admin.
+  const queueRequests = leaveRequests.filter((r) => {
+    const appRole = getApplicantRole(r);
+    const isAppAccount = appRole === 'ACCOUNTS' || appRole.startsWith('ACCOUNT');
+    const isAppAdmin = appRole === 'ADMIN' || appRole.startsWith('ADMIN');
+
+    if (isAccountsRole) {
+      // Accounts role approves ONLY staff's 1-day leaves (not Accounts' own leaves)
+      return r.totalDays <= 1 && !isAppAccount && !isAppAdmin;
+    }
+    if (isAdminRole) {
+      if (r.status !== 'PENDING' && r.status !== 'SUPER_APPROVED') return true;
+      // Admin approves 1-day leaves (Account I or Staff) and 1 to 2 day leaves
+      if (r.totalDays <= 2 && r.status === 'PENDING') return true;
+      // Admin approves Stage 2 (>2 day leaves)
+      if (r.totalDays > 2 && r.status === 'SUPER_APPROVED') return true;
+      return false;
+    }
+    if (isSuperAdmin) {
+      if (r.status !== 'PENDING') return true;
+      // Super Admin approves Account I's >1 day leaves
+      if (isAppAccount && r.totalDays > 1) return true;
+      // Super Admin approves Admin's leaves
+      if (isAppAdmin) return true;
+      // Super Admin approves Staff's >2 day leaves (Stage 1)
+      if (r.totalDays > 2) return true;
+      return true;
+    }
+    return true;
+  });
+
+  const pendingRequests = queueRequests.filter((r) => r.status === 'PENDING' || r.status === 'SUPER_APPROVED');
+
+  // Filtered requests list for Approvals Queue
+  const filteredRequests = queueRequests.filter((r) => {
     const matchesStatus =
       statusFilter === 'ALL' ||
       r.status === statusFilter ||
       (statusFilter === 'PENDING' && r.status === 'SUPER_APPROVED');
     const matchesSearch =
-      r.employee?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.employee?.employeeCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.leaveNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.leaveType?.name.toLowerCase().includes(searchQuery.toLowerCase());
+      (r.employee?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.employee?.employeeCode || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.leaveNo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.leaveType?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
-  const pendingRequests = leaveRequests.filter((r) => r.status === 'PENDING');
+  // Filtered list of MY own leave requests (applied by currently logged-in user / selected employee)
+  const myLeaveRequests = leaveRequests.filter((r) => {
+    if (selectedEmployeeId) {
+      return r.employeeId === selectedEmployeeId;
+    }
+    const currentEmpId = user?.employeeId;
+    if (currentEmpId) {
+      return r.employeeId === currentEmpId;
+    }
+    return true;
+  });
+
+  const filteredMyRequests = myLeaveRequests.filter((r) => {
+    const matchesStatus =
+      statusFilter === 'ALL' ||
+      r.status === statusFilter ||
+      (statusFilter === 'PENDING' && r.status === 'SUPER_APPROVED');
+    const matchesSearch =
+      (r.reason || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.leaveNo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.leaveType?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
   // KPI Calculations
   const totalAllocated = myBalances.reduce((sum, b) => sum + b.allocated, 0);
@@ -890,12 +962,12 @@ export const LeaveManagement: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-sm">
-                  {filteredRequests.length === 0 ? (
+                  {filteredMyRequests.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-8 text-center text-gray-500">No leave requests found.</td>
                     </tr>
                   ) : (
-                    filteredRequests.map((r) => (
+                    filteredMyRequests.map((r) => (
                       <tr key={r.id} className="hover:bg-white/5 transition-colors">
                         <td className="px-6 py-4 font-mono font-bold text-emerald-400">{r.leaveNo}</td>
                         <td className="px-6 py-4 font-semibold text-white">
@@ -1018,7 +1090,11 @@ export const LeaveManagement: React.FC = () => {
                         )}
                         {r.status === 'PENDING' && (
                           <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full text-xs font-semibold">
-                            {r.totalDays > 1 ? 'Awaiting Super Admin (1/2)' : 'Pending Approval'}
+                            {r.totalDays <= 1
+                              ? 'Pending Account I Approval'
+                              : r.totalDays <= 2
+                              ? 'Pending Admin Approval'
+                              : 'Pending Super Admin (Stage 1)'}
                           </span>
                         )}
                         {r.status === 'REJECTED' && (
@@ -1029,34 +1105,76 @@ export const LeaveManagement: React.FC = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
-                        {/* 1-Day Leave: Single step approval by Admin or Super Admin */}
+                        {/* 1-Day Leave: Single step approval by Account I / Accounts */}
                         {r.status === 'PENDING' && r.totalDays <= 1 && (
                           <>
-                            <button
-                              onClick={() => {
-                                setSelectedRequest(r);
-                                setActionType('APPROVE');
-                                setShowApproveRejectModal(true);
-                              }}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs font-bold border border-emerald-500/30 transition-colors"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedRequest(r);
-                                setActionType('REJECT');
-                                setShowApproveRejectModal(true);
-                              }}
-                              className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold border border-red-500/30 transition-colors"
-                            >
-                              Reject
-                            </button>
+                            {isAccountsRole || isAdminRole || isSuperAdmin ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setSelectedRequest(r);
+                                    setActionType('APPROVE');
+                                    setShowApproveRejectModal(true);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs font-bold border border-emerald-500/30 transition-colors"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedRequest(r);
+                                    setActionType('REJECT');
+                                    setShowApproveRejectModal(true);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold border border-red-500/30 transition-colors"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-amber-400 font-semibold px-2 py-1 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                                Pending Account I Approval
+                              </span>
+                            )}
                           </>
                         )}
 
-                        {/* Multi-Day Leave (>1 day), Stage 1: Super Admin approval required */}
-                        {r.status === 'PENDING' && r.totalDays > 1 && (
+                        {/* 1 to 2-Day Leave: Single step approval by Admin */}
+                        {r.status === 'PENDING' && r.totalDays > 1 && r.totalDays <= 2 && (
+                          <>
+                            {isAdminRole || isSuperAdmin ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setSelectedRequest(r);
+                                    setActionType('APPROVE');
+                                    setShowApproveRejectModal(true);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs font-bold border border-emerald-500/30 transition-colors"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedRequest(r);
+                                    setActionType('REJECT');
+                                    setShowApproveRejectModal(true);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold border border-red-500/30 transition-colors"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-amber-400 font-semibold px-2 py-1 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                                Pending Admin Approval
+                              </span>
+                            )}
+                          </>
+                        )}
+
+                        {/* Multi-Day Leave (>2 days), Stage 1: Super Admin approval required */}
+                        {r.status === 'PENDING' && r.totalDays > 2 && (
                           <>
                             {isSuperAdmin ? (
                               <button

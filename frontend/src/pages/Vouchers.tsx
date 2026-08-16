@@ -299,7 +299,6 @@ export const Vouchers: React.FC = () => {
     printWindow.focus();
     setTimeout(() => {
       printWindow.print();
-      printWindow.close();
     }, 250);
   };
 

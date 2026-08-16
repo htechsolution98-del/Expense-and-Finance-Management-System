@@ -18,17 +18,27 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredPermissi
 
   // If a specific permission is required, check if user has it
   if (requiredPermission) {
-    // '*' wildcard means SUPER_ADMIN — bypass all permission guards
-    // Also bypass if role is explicitly SUPER_ADMIN (double safety)
-    const requiredPerms = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission];
-    const hasPermission =
-      user.role === 'SUPER_ADMIN' ||
-      user.permissions?.includes('*') ||
-      requiredPerms.some((p) => user.permissions?.includes(p));
+    if (requiredPermission === 'SUPER_ADMIN_ONLY') {
+      const isSuper = user.role === 'SUPER_ADMIN' || user.permissions?.includes('*');
+      if (!isSuper) {
+        return <Navigate to="/unauthorized" replace />;
+      }
+    } else if (requiredPermission === 'ADMIN_ONLY') {
+      const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' || user.role === 'ACCOUNTS' || user.role?.startsWith('ADMIN') || user.permissions?.includes('*');
+      if (!isAdmin) {
+        return <Navigate to="/unauthorized" replace />;
+      }
+    } else {
+      const requiredPerms = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission];
+      const hasPermission =
+        user.role === 'SUPER_ADMIN' ||
+        user.permissions?.includes('*') ||
+        requiredPerms.some((p) => user.permissions?.includes(p));
 
-    if (!hasPermission) {
-      // Redirect to unauthorized / access denied page
-      return <Navigate to="/unauthorized" replace />;
+      if (!hasPermission) {
+        // Redirect to unauthorized / access denied page
+        return <Navigate to="/unauthorized" replace />;
+      }
     }
   }
 

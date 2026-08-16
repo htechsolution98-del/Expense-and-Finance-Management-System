@@ -77,20 +77,57 @@ async function main() {
   }
   console.log(`Permissions seeded: ${Object.keys(dbPermissions).length} permissions`);
 
-  // 3. Seed only the SUPER_ADMIN system role.
-  // All other roles (ADMIN, ACCOUNTS, STAFF, custom) must be created via the app UI.
+  // 3. Define Standard Roles and Permissions Mapping
   const rolesList = [
     {
       name: 'SUPER_ADMIN',
       description: 'Super Admin - full system access',
-      // '*' wildcard grants full access — checked in middleware & sidebar
       permissions: ['*'],
+    },
+    {
+      name: 'ADMIN',
+      description: 'Admin - operational management and approval access',
+      permissions: [
+        'USER_VIEW', 'USER_CREATE', 'USER_UPDATE', 'USER_DISABLE',
+        'ROLE_VIEW', 'ROLE_CREATE', 'ROLE_UPDATE',
+        'COMPANY_VIEW', 'COMPANY_UPDATE',
+        'ACCOUNT_VIEW', 'ACCOUNT_CREATE', 'ACCOUNT_UPDATE',
+        'EXPENSE_VIEW', 'EXPENSE_CREATE', 'EXPENSE_APPROVE',
+        'PAYMENT_VIEW', 'PAYMENT_CREATE', 'PAYMENT_APPROVE',
+        'SALARY_VIEW', 'SALARY_CREATE', 'SALARY_APPROVE',
+        'LOAN_VIEW', 'LOAN_CREATE', 'LOAN_APPROVE',
+        'ADVANCE_VIEW', 'ADVANCE_CREATE', 'ADVANCE_APPROVE',
+        'REPORT_VIEW',
+        'LEAVE_VIEW', 'LEAVE_APPLY', 'LEAVE_APPROVE', 'LEAVE_REJECT', 'LEAVE_CANCEL', 'LEAVE_MANAGE', 'LEAVE_BALANCE_MANAGE', 'LEAVE_REPORT_VIEW', 'LEAVE_POLICY_MANAGE',
+      ],
+    },
+    {
+      name: 'ACCOUNTS',
+      description: 'Accounts - bookkeeping and financial entry creation',
+      permissions: [
+        'USER_VIEW', 'ROLE_VIEW',
+        'ACCOUNT_VIEW', 'ACCOUNT_CREATE', 'ACCOUNT_UPDATE',
+        'EXPENSE_VIEW', 'EXPENSE_CREATE', 'EXPENSE_APPROVE',
+        'PAYMENT_VIEW', 'PAYMENT_CREATE', 'PAYMENT_APPROVE',
+        'SALARY_VIEW', 'SALARY_CREATE',
+        'LOAN_VIEW', 'LOAN_CREATE',
+        'ADVANCE_VIEW', 'ADVANCE_CREATE', 'ADVANCE_APPROVE',
+        'REPORT_VIEW',
+        'LEAVE_VIEW', 'LEAVE_APPLY', 'LEAVE_APPROVE', 'LEAVE_REJECT', 'LEAVE_CANCEL', 'LEAVE_REPORT_VIEW',
+      ],
+    },
+    {
+      name: 'STAFF',
+      description: 'Staff - basic employee self-service',
+      permissions: [
+        'EXPENSE_VIEW', 'EXPENSE_CREATE',
+        'ADVANCE_VIEW', 'ADVANCE_CREATE',
+        'LEAVE_VIEW', 'LEAVE_APPLY', 'LEAVE_CANCEL',
+      ],
     },
   ];
 
   const seededRoles: Record<string, string> = {};
-  // Clear out old roles permissions links first to avoid orphaned links
-  await prisma.rolePermission.deleteMany({});
 
   for (const r of rolesList) {
     const role = await prisma.role.upsert({
@@ -104,16 +141,21 @@ async function main() {
     seededRoles[role.name] = role.id;
     console.log(`Seeding role ${role.name} permissions...`);
 
-    // Connect permissions to roles
+    // Connect permissions to roles if not already present
     for (const permName of r.permissions) {
       const permId = dbPermissions[permName];
       if (permId) {
-        await prisma.rolePermission.create({
-          data: {
-            roleId: role.id,
-            permissionId: permId,
-          },
+        const existingLink = await prisma.rolePermission.findFirst({
+          where: { roleId: role.id, permissionId: permId }
         });
+        if (!existingLink) {
+          await prisma.rolePermission.create({
+            data: {
+              roleId: role.id,
+              permissionId: permId,
+            },
+          });
+        }
       }
     }
   }
@@ -250,6 +292,54 @@ async function main() {
     }
   }
   console.log(`Leave balances initialized for ${employees.length} employees`);
+
+  // 8. Seed Default Expense Categories
+  const defaultExpenseCategories = [
+    { id: 'cat-office-supplies', name: 'Office Supplies & Stationery' },
+    { id: 'cat-travel-conveyance', name: 'Travel & Conveyance' },
+    { id: 'cat-food-refreshments', name: 'Food & Client Refreshments' },
+    { id: 'cat-fuel-petrol', name: 'Fuel & Petrol Allowance' },
+    { id: 'cat-internet-phone', name: 'Internet & Phone Bills' },
+    { id: 'cat-equipment-maint', name: 'Equipment & Maintenance' },
+    { id: 'cat-miscellaneous', name: 'Miscellaneous Expense' },
+  ];
+
+  for (const cat of defaultExpenseCategories) {
+    await prisma.expenseCategory.upsert({
+      where: { id: cat.id },
+      update: { name: cat.name, status: 'ACTIVE', deletedAt: null },
+      create: {
+        id: cat.id,
+        companyId: defaultCompany.id,
+        name: cat.name,
+        status: 'ACTIVE',
+      },
+    });
+  }
+  console.log(`Default Expense Categories seeded: ${defaultExpenseCategories.length} categories`);
+
+  // 9. Seed Default Payment Categories
+  const defaultPaymentCategories = [
+    { id: 'pcat-sales-revenue', name: 'Sales Revenue', type: 'PAYMENT_IN' },
+    { id: 'pcat-vendor-payout', name: 'Vendor Payout', type: 'PAYMENT_OUT' },
+    { id: 'pcat-salary-payout', name: 'Salary & Payroll', type: 'PAYMENT_OUT' },
+    { id: 'pcat-office-expense', name: 'Office Expense', type: 'BOTH' },
+  ];
+
+  for (const pcat of defaultPaymentCategories) {
+    await prisma.paymentCategory.upsert({
+      where: { id: pcat.id },
+      update: { name: pcat.name, type: pcat.type, status: 'ACTIVE', deletedAt: null },
+      create: {
+        id: pcat.id,
+        companyId: defaultCompany.id,
+        name: pcat.name,
+        type: pcat.type,
+        status: 'ACTIVE',
+      },
+    });
+  }
+  console.log(`Default Payment Categories seeded: ${defaultPaymentCategories.length} categories`);
 
   console.log('Database seeding successfully finished!');
 }
