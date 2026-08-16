@@ -19,6 +19,8 @@ import ApprovalRules from './pages/ApprovalRules';
 import Users from './pages/Users';
 import { CompanySettings } from './pages/CompanySettings';
 import LeaveManagement from './pages/LeaveManagement';
+import AttendanceManagement from './pages/AttendanceManagement';
+import AttendanceConfig from './pages/AttendanceConfig';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { DashboardLayout } from './layouts/DashboardLayout';
 
@@ -35,6 +37,7 @@ const App: React.FC = () => {
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/leaves" element={<LeaveManagement />} />
+            <Route path="/attendance" element={<AttendanceManagement />} />
             
             {/* User & Access Management Routes */}
             <Route element={<ProtectedRoute requiredPermission="USER_VIEW" />}>
@@ -51,6 +54,7 @@ const App: React.FC = () => {
             <Route element={<ProtectedRoute requiredPermission="SUPER_ADMIN_ONLY" />}>
               <Route path="/approval-rules" element={<ApprovalRules />} />
               <Route path="/company-settings" element={<CompanySettings />} />
+              <Route path="/attendance-config" element={<AttendanceConfig />} />
             </Route>
             
             <Route element={<ProtectedRoute requiredPermission={['PAYMENT_VIEW', 'PAYMENT_CREATE', 'PAYMENT_APPROVE']} />}>

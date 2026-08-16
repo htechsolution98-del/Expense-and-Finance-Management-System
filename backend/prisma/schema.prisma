@@ -46,6 +46,8 @@ model Company {
   leaveRequests        LeaveRequest[]
   leavePolicies        LeavePolicy[]
   holidays             Holiday[]
+  attendanceConfigs    AttendanceConfig[]
+  attendanceRecords    AttendanceRecord[]
 
   @@map("companies")
 }
@@ -263,8 +265,9 @@ model Employee {
   advances         Advance[]
   bankAccounts     EmployeeBankAccount[]
   users            User[]
-  leaveBalances    LeaveBalance[]
-  leaveRequests    LeaveRequest[]
+  leaveBalances       LeaveBalance[]
+  leaveRequests       LeaveRequest[]
+  attendanceRecords   AttendanceRecord[]
 
   @@unique([companyId, employeeCode])
   @@map("employees")
@@ -762,4 +765,74 @@ model Holiday {
   company Company @relation(fields: [companyId], references: [id])
 
   @@map("holidays")
+}
+
+// ─── Attendance Management System ────────────────────────────────────────────
+
+model AttendanceConfig {
+  id                   String   @id @default(uuid())
+  companyId            String   @map("company_id")
+  officeStartTime      String   @default("09:00") @map("office_start_time")
+  officeEndTime        String   @default("18:00") @map("office_end_time")
+  graceMinutes         Int      @default(15) @map("grace_minutes")
+  breakDurationMinutes Int      @default(60) @map("break_duration_minutes")
+  halfDayMinutes       Int      @default(240) @map("half_day_minutes")
+  breakStartTime       String   @default("13:00") @map("break_start_time")
+  breakEndTime         String   @default("14:00") @map("break_end_time")
+  geoLat               Float?   @map("geo_lat")
+  geoLng               Float?   @map("geo_lng")
+  geoRadiusMeters      Int      @default(200) @map("geo_radius_meters")
+  geoFencingEnabled    Boolean  @default(false) @map("geo_fencing_enabled")
+  selfieRequired       Boolean  @default(false) @map("selfie_required")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId])
+  @@map("attendance_configs")
+}
+
+model AttendanceRecord {
+  id               String    @id @default(uuid())
+  companyId        String    @map("company_id")
+  employeeId       String    @map("employee_id")
+  date             DateTime  @map("date")
+  checkInTime      DateTime  @map("check_in_time")
+  checkOutTime     DateTime? @map("check_out_time")
+  checkInLat       Float?    @map("check_in_lat")
+  checkInLng       Float?    @map("check_in_lng")
+  checkOutLat      Float?    @map("check_out_lat")
+  checkOutLng      Float?    @map("check_out_lng")
+  checkInSelfie    String?   @map("check_in_selfie")
+  checkOutSelfie   String?   @map("check_out_selfie")
+  totalWorkMinutes Int?      @map("total_work_minutes")
+  totalBreakMinutes Int?     @map("total_break_minutes")
+  status           String    @default("CHECKED_IN") // CHECKED_IN, CHECKED_OUT, ON_BREAK
+  lateBy           Int?      @map("late_by") // minutes late
+  earlyExitBy      Int?      @map("early_exit_by") // minutes early
+  isWithinGeofence Boolean   @default(true) @map("is_within_geofence")
+  isHalfDay        Boolean   @default(false) @map("is_half_day")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  company  Company            @relation(fields: [companyId], references: [id])
+  employee Employee           @relation(fields: [employeeId], references: [id])
+  breaks   AttendanceBreak[]
+
+  @@unique([employeeId, date])
+  @@map("attendance_records")
+}
+
+model AttendanceBreak {
+  id              String    @id @default(uuid())
+  attendanceId    String    @map("attendance_id")
+  breakStart      DateTime  @map("break_start")
+  breakEnd        DateTime? @map("break_end")
+  durationMinutes Int?      @map("duration_minutes")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  attendance AttendanceRecord @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+
+  @@map("attendance_breaks")
 }

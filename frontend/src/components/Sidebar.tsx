@@ -13,7 +13,8 @@ import {
   Tags,
   Building2,
   Settings,
-  Calendar
+  Calendar,
+  Clock
 } from 'lucide-react';
 
 // Helper to read user from localStorage
@@ -161,6 +162,20 @@ export const Sidebar: React.FC = () => {
       icon: <Calendar className="w-5 h-5" />,
       enabled: true,
       visible: true
+    },
+    {
+      name: 'Attendance',
+      path: '/attendance',
+      icon: <Clock className="w-5 h-5" />,
+      enabled: true,
+      visible: true
+    },
+    {
+      name: 'Attendance Settings',
+      path: '/attendance-config',
+      icon: <Settings className="w-5 h-5" />,
+      enabled: true,
+      visible: user.role === 'SUPER_ADMIN' || user.permissions?.includes('*')
     },
     {
       name: 'Employee Portal',

@@ -16,6 +16,7 @@ import paymentCategoryRoutes from './payment-category.routes';
 import approvalRuleRoutes from './approval-rule.routes';
 import companyRoutes from './company.routes';
 import leaveRoutes from './leave.routes';
+import attendanceRoutes from './attendance.routes';
 
 const router = Router();
 
@@ -36,5 +37,6 @@ router.use('/reports', reportRoutes);
 router.use('/payment-categories', paymentCategoryRoutes);
 router.use('/approval-rules', approvalRuleRoutes);
 router.use('/leaves', leaveRoutes);
+router.use('/attendance', attendanceRoutes);
 
 export default router;

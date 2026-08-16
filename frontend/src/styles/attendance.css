@@ -1,0 +1,119 @@
+/* ── Attendance Management Styles ─────────────────────────────────────────── */
+
+.att-root { max-width: 1400px; margin: 0 auto; }
+
+/* ── Live Clock ─────────────────────────────────────────────────────────── */
+.att-clock { font-size: 3.5rem; font-weight: 900; letter-spacing: -0.03em; background: linear-gradient(135deg, #a78bfa, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; line-height: 1; }
+.att-clock-date { text-align: center; color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin-top: 4px; }
+
+/* ── Check In/Out Buttons ───────────────────────────────────────────────── */
+.att-action-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 32px;
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+}
+
+.att-btn-checkin {
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  border: 4px solid #10b981;
+  background: radial-gradient(circle at 30% 30%, rgba(16,185,129,0.25), rgba(16,185,129,0.05));
+  color: #10b981;
+  font-size: 1.1rem; font-weight: 800;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 40px rgba(16,185,129,0.15);
+}
+.att-btn-checkin:hover { transform: scale(1.05); box-shadow: 0 0 60px rgba(16,185,129,0.3); border-color: #34d399; }
+.att-btn-checkin:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.att-btn-checkout {
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  border: 4px solid #ef4444;
+  background: radial-gradient(circle at 30% 30%, rgba(239,68,68,0.25), rgba(239,68,68,0.05));
+  color: #ef4444;
+  font-size: 1.1rem; font-weight: 800;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 40px rgba(239,68,68,0.15);
+}
+.att-btn-checkout:hover { transform: scale(1.05); box-shadow: 0 0 60px rgba(239,68,68,0.3); border-color: #f87171; }
+.att-btn-checkout:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.att-btn-break {
+  padding: 12px 28px;
+  border-radius: 16px;
+  border: 2px solid #f59e0b;
+  background: rgba(245,158,11,0.1);
+  color: #f59e0b;
+  font-size: 0.9rem; font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.att-btn-break:hover { background: rgba(245,158,11,0.2); }
+.att-btn-break.active { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.1); animation: att-pulse 1.5s ease-in-out infinite; }
+
+@keyframes att-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.3); } 50% { box-shadow: 0 0 0 12px rgba(239,68,68,0); } }
+
+/* ── Geofence Status ────────────────────────────────────────────────────── */
+.att-geo-status { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 600; }
+.att-geo-dot { width: 10px; height: 10px; border-radius: 50%; }
+.att-geo-dot.inside { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.6); }
+.att-geo-dot.outside { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.6); }
+.att-geo-dot.loading { background: #f59e0b; animation: att-pulse-dot 1s infinite; }
+@keyframes att-pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ── Today Timeline ─────────────────────────────────────────────────────── */
+.att-timeline { display: flex; flex-direction: column; gap: 12px; padding: 20px; background: rgba(15,23,42,0.4); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
+.att-timeline-item { display: flex; align-items: center; gap: 12px; }
+.att-timeline-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.att-timeline-dot.checkin { background: #10b981; }
+.att-timeline-dot.break { background: #f59e0b; }
+.att-timeline-dot.checkout { background: #ef4444; }
+.att-timeline-line { width: 2px; height: 20px; background: rgba(255,255,255,0.1); margin-left: 5px; }
+.att-timeline-time { font-size: 0.85rem; font-weight: 700; color: #e2e8f0; min-width: 70px; }
+.att-timeline-label { font-size: 0.8rem; color: #94a3b8; }
+
+/* ── KPI Cards ──────────────────────────────────────────────────────────── */
+.att-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.att-kpi-card { padding: 20px; border-radius: 16px; background: rgba(15,23,42,0.5); border: 1px solid rgba(255,255,255,0.05); }
+.att-kpi-value { font-size: 2rem; font-weight: 900; color: white; }
+.att-kpi-label { font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+
+/* ── Selfie Capture ─────────────────────────────────────────────────────── */
+.att-selfie-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(0,0,0,0.85);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+}
+.att-selfie-video { width: 300px; height: 300px; border-radius: 50%; object-fit: cover; border: 4px solid #a78bfa; }
+.att-selfie-preview { width: 200px; height: 200px; border-radius: 50%; object-fit: cover; border: 3px solid #10b981; }
+.att-selfie-actions { display: flex; gap: 12px; }
+
+/* ── Config Form ────────────────────────────────────────────────────────── */
+.att-config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.att-config-field label { display: block; font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.att-config-field input, .att-config-field select {
+  width: 100%; padding: 10px 14px; border-radius: 12px;
+  background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1);
+  color: white; font-size: 0.9rem; outline: none;
+}
+.att-config-field input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+.att-config-toggle { display: flex; align-items: center; gap: 10px; }
+.att-config-toggle input[type="checkbox"] { width: 20px; height: 20px; accent-color: #6366f1; cursor: pointer; }
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .att-kpi-grid { grid-template-columns: 1fr 1fr; }
+  .att-config-grid { grid-template-columns: 1fr; }
+  .att-btn-checkin, .att-btn-checkout { width: 150px; height: 150px; font-size: 0.95rem; }
+}

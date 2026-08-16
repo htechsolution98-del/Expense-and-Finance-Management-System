@@ -901,16 +901,7 @@ export const LeaveManagement: React.FC = () => {
                       >
                         {b.leaveType?.isPaid ? 'PAID' : 'UNPAID'}
                       </button>
-                      {canApprove && (
-                        <button
-                          type="button"
-                          onClick={() => openAdjustQuotaModal(b)}
-                          title="Adjust Employee Quota"
-                          className="p-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      {/* Edit quota button removed as per request */}
                     </div>
                   </div>
                   <div className="flex items-baseline justify-between text-xs text-gray-400 pt-1 border-t border-white/5">
