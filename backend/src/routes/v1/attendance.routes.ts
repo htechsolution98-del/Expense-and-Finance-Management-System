@@ -13,6 +13,8 @@ import {
   getMyAttendance,
   getAllAttendance,
   getAttendanceReport,
+  toggleEmployeeWFH,
+  createManualAttendance,
 } from '../../controllers/attendance.controller';
 import { authenticate } from '../../middleware/auth.middleware';
 import { tenantScopeMiddleware } from '../../middleware/tenantScope.middleware';
@@ -67,5 +69,7 @@ router.get('/today', getTodayStatus);
 router.get('/my', getMyAttendance);
 router.get('/all', getAllAttendance);
 router.get('/report', getAttendanceReport);
+router.patch('/employees/:id/wfh', toggleEmployeeWFH);
+router.post('/manual', createManualAttendance);
 
 export default router;

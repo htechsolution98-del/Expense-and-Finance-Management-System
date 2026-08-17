@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { api } from '../services/api';
 import {
   Calendar as CalendarIcon,
@@ -237,6 +238,9 @@ export const LeaveManagement: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Auto-refresh every 30s to catch leave approvals/rejections in real-time
+  useAutoRefresh(fetchData, 30000, [activeTab, selectedEmployeeId]);
 
   // Live calculation of days when dates change in Apply Leave form
   useEffect(() => {

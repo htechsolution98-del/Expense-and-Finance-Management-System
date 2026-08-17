@@ -15,7 +15,8 @@ import {
   Download,
   Search,
   RefreshCw,
-  Eye
+  Eye,
+  Plus
 } from 'lucide-react';
 import '../styles/attendance.css';
 
@@ -69,19 +70,25 @@ interface AttendanceConfig {
 export default function AttendanceManagement() {
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
-  const isAdmin = user && (user.role === 'SUPER_ADMIN' || user.permissions?.includes('*'));
+  const isAdmin = user && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' || user.permissions?.includes('*'));
+  const isSuperAdmin = user && (user.role === 'SUPER_ADMIN' || user.permissions?.includes('*'));
 
-  const [activeTab, setActiveTab] = useState<'my' | 'admin'>(isAdmin ? 'admin' : 'my');
+  const [activeTab, setActiveTab] = useState<'my' | 'admin' | 'wfh'>(isAdmin ? 'admin' : 'my');
   const [config, setConfig] = useState<AttendanceConfig | null>(null);
   const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
   const [adminRecords, setAdminRecords] = useState<AttendanceRecord[]>([]);
   const [adminReport, setAdminReport] = useState<any | null>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
 
   // Filters
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [adminFilterDate, setAdminFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [adminFilterType, setAdminFilterType] = useState<'ALL' | 'PRESENT' | 'LATE' | 'ABSENT'>('ALL');
+  const [adminFilterMode, setAdminFilterMode] = useState<'single' | 'range'>('single');
+  const [adminStartDate, setAdminStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [adminEndDate, setAdminEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Loading & Messages
   const [loading, setLoading] = useState(false);
@@ -92,6 +99,12 @@ export default function AttendanceManagement() {
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [isWithinRadius, setIsWithinRadius] = useState<boolean | null>(null);
+  const [myAllowWFH, setMyAllowWFH] = useState<boolean>(false);
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualEmpId, setManualEmpId] = useState('');
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualCheckIn, setManualCheckIn] = useState('09:00');
+  const [manualCheckOut, setManualCheckOut] = useState('18:00');
 
   // Camera / Selfie state
   const [showCamera, setShowCamera] = useState(false);
@@ -103,11 +116,41 @@ export default function AttendanceManagement() {
 
   // Clock
   const [time, setTime] = useState(new Date());
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [secondsSinceRefresh, setSecondsSinceRefresh] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
+    const timer = setInterval(() => {
+      setTime(new Date());
+      setSecondsSinceRefresh((s) => s + 1);
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // ── Auto-polling: silently refresh attendance data every 30 seconds ──────────
+  useEffect(() => {
+    if (!isAdmin) return;
+    const poll = setInterval(() => {
+      fetchAdminRecords();
+      fetchAdminReport();
+      fetchTodayStatus();
+      setLastRefresh(new Date());
+      setSecondsSinceRefresh(0);
+    }, 30000); // every 30s
+    return () => clearInterval(poll);
+  }, [adminFilterDate, adminStartDate, adminEndDate, adminFilterMode, activeTab]);
+
+  // My attendance auto-refresh every 30s
+  useEffect(() => {
+    if (isAdmin) return;
+    const poll = setInterval(() => {
+      fetchTodayStatus();
+      fetchMyHistory();
+      setLastRefresh(new Date());
+      setSecondsSinceRefresh(0);
+    }, 30000);
+    return () => clearInterval(poll);
+  }, [filterMonth, filterYear]);
 
   // Fetch initial data
   useEffect(() => {
@@ -117,8 +160,25 @@ export default function AttendanceManagement() {
     if (isAdmin) {
       fetchAdminRecords();
       fetchAdminReport();
+      if (activeTab === 'wfh' || activeTab === 'admin') {
+        fetchEmployeesList();
+      }
     }
-  }, [filterMonth, filterYear, adminFilterDate, activeTab]);
+  }, [filterMonth, filterYear, adminFilterDate, adminStartDate, adminEndDate, adminFilterMode, activeTab]);
+
+  // Reset filter type when date changes
+  useEffect(() => {
+    setAdminFilterType('ALL');
+  }, [adminFilterDate, adminStartDate, adminEndDate, adminFilterMode]);
+
+  // Filter records based on selected KPI card
+  const filteredRecords = adminRecords.filter((record) => {
+    if (adminFilterType === 'ALL') return true;
+    if (adminFilterType === 'PRESENT') return record.status !== 'ABSENT';
+    if (adminFilterType === 'LATE') return record.lateBy !== null && record.lateBy > 0;
+    if (adminFilterType === 'ABSENT') return record.status === 'ABSENT';
+    return true;
+  });
 
   // Geolocation watch
   useEffect(() => {
@@ -184,6 +244,7 @@ export default function AttendanceManagement() {
       const res = await api.get('/attendance/today');
       if (res.data?.status === 'success') {
         setTodayRecord(res.data.data);
+        setMyAllowWFH(res.data.allowWFH || false);
       }
     } catch (err) {
       console.error(err);
@@ -203,7 +264,13 @@ export default function AttendanceManagement() {
 
   const fetchAdminRecords = async () => {
     try {
-      const res = await api.get(`/attendance/all?date=${adminFilterDate}`);
+      let url = `/attendance/all`;
+      if (adminFilterMode === 'single') {
+        url += `?date=${adminFilterDate}`;
+      } else {
+        url += `?startDate=${adminStartDate}&endDate=${adminEndDate}`;
+      }
+      const res = await api.get(url);
       if (res.data?.status === 'success') {
         setAdminRecords(res.data.data);
       }
@@ -220,6 +287,114 @@ export default function AttendanceManagement() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const downloadAttendanceCSV = () => {
+    if (filteredRecords.length === 0) return;
+
+    let csvContent = 'Date,Employee Code,Employee Name,Department,Check-In,Check-Out,Total Work,Break,Verification,Status\n';
+
+    filteredRecords.forEach((record) => {
+      const dateStr = new Date(record.date).toLocaleDateString();
+      const empCode = record.employee?.employeeCode || '';
+      const empName = record.employee?.name || '';
+      const deptName = record.employee?.department?.name || 'General';
+      const checkIn = record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--';
+      const checkOut = record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--';
+      
+      const formatDurationText = (min: number | null) => {
+        if (!min && min !== 0) return '--';
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        return h > 0 ? `${h}h ${m}m` : `${m}m`;
+      };
+      
+      const totalWork = formatDurationText(record.totalWorkMinutes);
+      const totalBreak = formatDurationText(record.totalBreakMinutes);
+      const verification = record.status !== 'ABSENT' ? (record.isWithinGeofence ? 'Geofenced' : 'Geo Breach') : '--';
+      const status = record.isHalfDay ? `${record.status} (Half Day)` : record.status;
+
+      csvContent += `"${dateStr}","${empCode}","${empName}","${deptName}","${checkIn}","${checkOut}","${totalWork}","${totalBreak}","${verification}","${status}"\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    const filename = `attendance_report_${adminFilterMode === 'single' ? adminFilterDate : `${adminStartDate}_to_${adminEndDate}`}.csv`;
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const fetchEmployeesList = async () => {
+    try {
+      const res = await api.get('/masters/employees');
+      if (res.data?.success || res.data?.status === 'success') {
+        setEmployees(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleWFH = async (empId: string, currentVal: boolean) => {
+    try {
+      const res = await api.patch(`/attendance/employees/${empId}/wfh`, {
+        allowWFH: !currentVal,
+      });
+      if (res.data?.success || res.data?.status === 'success') {
+        setEmployees((prev) =>
+          prev.map((emp) => (emp.id === empId ? { ...emp, allowWFH: !currentVal } : emp))
+        );
+        setMessage({ text: res.data.message || 'WFH permission updated.', type: 'success' });
+        setLastRefresh(new Date());
+        setSecondsSinceRefresh(0);
+        setTimeout(() => setMessage(null), 3000);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMessage({
+        text: err.response?.data?.message || 'Failed to update WFH permission.',
+        type: 'error',
+      });
+    }
+  };
+
+  const handleManualAttendanceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await api.post('/attendance/manual', {
+        employeeId: manualEmpId,
+        date: manualDate,
+        checkInTimeStr: manualCheckIn,
+        checkOutTimeStr: manualCheckOut || null,
+      });
+
+      if (res.data?.success || res.data?.status === 'success') {
+        setMessage({ text: res.data.message || 'Manual attendance processed successfully.', type: 'success' });
+        setShowManualModal(false);
+        setManualEmpId('');
+        fetchAdminRecords();
+        fetchAdminReport();
+        setLastRefresh(new Date());
+        setSecondsSinceRefresh(0);
+        setTimeout(() => setMessage(null), 3000);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMessage({
+        text: err.response?.data?.message || 'Failed to submit manual attendance.',
+        type: 'error',
+      });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -347,8 +522,8 @@ export default function AttendanceManagement() {
     }
   };
 
-  const formatDuration = (min: number | null) => {
-    if (!min) return '--';
+  const formatDuration = (min: number | null | undefined) => {
+    if (min === null || min === undefined) return '--';
     const hrs = Math.floor(min / 60);
     const mins = min % 60;
     return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
@@ -368,6 +543,16 @@ export default function AttendanceManagement() {
             }`}
           >
             Attendance Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab('wfh')}
+            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+              activeTab === 'wfh'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                : 'bg-white/5 text-gray-400 hover:text-white'
+            }`}
+          >
+            WFH Settings
           </button>
           <button
             onClick={() => setActiveTab('my')}
@@ -417,12 +602,14 @@ export default function AttendanceManagement() {
                 <div className="att-geo-status">
                   <div
                     className={`att-geo-dot ${
-                      geoLoading ? 'loading' : isWithinRadius ? 'inside' : 'outside'
+                      geoLoading ? 'loading' : (isWithinRadius || myAllowWFH) ? 'inside' : 'outside'
                     }`}
                   />
                   <span className="text-xs text-gray-300">
                     {geoLoading
                       ? 'Acquiring GPS location...'
+                      : myAllowWFH
+                      ? 'Work From Home Allowed'
                       : isWithinRadius
                       ? 'Within Office Geofence'
                       : 'Outside Geofence'}
@@ -434,13 +621,13 @@ export default function AttendanceManagement() {
               {!todayRecord || todayRecord.status === 'CHECKED_OUT' ? (
                 <button
                   onClick={() => handleCheckInOut('in')}
-                  disabled={actionLoading || (config?.geoFencingEnabled && isWithinRadius === false)}
+                  disabled={actionLoading || (config?.geoFencingEnabled && !myAllowWFH && isWithinRadius === false)}
                   className="att-btn-checkin"
                 >
                   <Clock className="w-8 h-8" />
                   <span>CHECK IN</span>
                   <span className="text-[10px] opacity-75 font-normal">
-                    {config?.geoFencingEnabled && isWithinRadius === false ? 'Disabled (Outside)' : 'Arrival'}
+                    {config?.geoFencingEnabled && !myAllowWFH && isWithinRadius === false ? 'Disabled (Outside)' : 'Arrival'}
                   </span>
                 </button>
               ) : (
@@ -595,16 +782,58 @@ export default function AttendanceManagement() {
                               </span>
                             )}
                           </td>
+                          {/* Check-Out */}
                           <td className="py-3.5 text-gray-300">
                             {record.checkOutTime
                               ? new Date(record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                              : (
+                                <span className="text-[10px] text-amber-400 font-bold italic">
+                                  {record.status === 'CHECKED_IN' ? 'In Progress...' : record.status === 'ON_BREAK' ? 'On Break...' : '--'}
+                                </span>
+                              )}
+                          </td>
+                          {/* Work Hours */}
+                          <td className="py-3.5 font-medium text-indigo-300">
+                            {record.totalWorkMinutes != null
+                              ? formatDuration(record.totalWorkMinutes)
+                              : record.checkInTime
+                              ? (() => {
+                                  const elapsed = Math.floor((Date.now() - new Date(record.checkInTime).getTime()) / 60000);
+                                  return (
+                                    <span className="text-indigo-300/70 italic text-xs">
+                                      ~{formatDuration(elapsed)}
+                                    </span>
+                                  );
+                                })()
                               : '--'}
                           </td>
-                          <td className="py-3.5 font-medium text-indigo-300">
-                            {formatDuration(record.totalWorkMinutes)}
-                          </td>
+                          {/* Break Duration */}
                           <td className="py-3.5 text-gray-400">
-                            {formatDuration(record.totalBreakMinutes)}
+                            {(() => {
+                              // Sum all completed breaks
+                              const completedBreakMins = record.breaks
+                                ?.filter((b) => b.breakEnd != null)
+                                .reduce((acc, b) => acc + (b.durationMinutes ?? 0), 0) ?? 0;
+
+                              if (record.status === 'ON_BREAK') {
+                                // Find the active (ongoing) break
+                                const activeBreak = record.breaks?.find((b) => b.breakEnd == null);
+                                const activeMins = activeBreak
+                                  ? Math.floor((Date.now() - new Date(activeBreak.breakStart).getTime()) / 60000)
+                                  : 0;
+                                const total = completedBreakMins + activeMins;
+                                return (
+                                  <span className="text-amber-400 italic text-xs font-medium">
+                                    ~{formatDuration(total)}
+                                  </span>
+                                );
+                              }
+
+                              const total = record.totalBreakMinutes ?? completedBreakMins;
+                              return total > 0
+                                ? formatDuration(total)
+                                : <span className="text-gray-600">0m</span>;
+                            })()}
                           </td>
                           <td className="py-3.5">
                             <span
@@ -643,19 +872,47 @@ export default function AttendanceManagement() {
           {/* KPI Dashboard Cards */}
           {adminReport && (
             <div className="att-kpi-grid">
-              <div className="att-kpi-card flex flex-col justify-between">
+              <div
+                className={`att-kpi-card flex flex-col justify-between cursor-pointer transition-all border ${
+                  adminFilterType === 'PRESENT'
+                    ? 'ring-2 ring-emerald-500/50 bg-emerald-500/10 border-emerald-500/30'
+                    : 'border-white/5'
+                }`}
+                onClick={() => setAdminFilterType(adminFilterType === 'PRESENT' ? 'ALL' : 'PRESENT')}
+              >
                 <span className="att-kpi-value text-emerald-400">{adminReport.summary.presentToday}</span>
                 <span className="att-kpi-label">Present Today</span>
               </div>
-              <div className="att-kpi-card flex flex-col justify-between">
+              <div
+                className={`att-kpi-card flex flex-col justify-between cursor-pointer transition-all border ${
+                  adminFilterType === 'LATE'
+                    ? 'ring-2 ring-amber-500/50 bg-amber-500/10 border-amber-500/30'
+                    : 'border-white/5'
+                }`}
+                onClick={() => setAdminFilterType(adminFilterType === 'LATE' ? 'ALL' : 'LATE')}
+              >
                 <span className="att-kpi-value text-amber-400">{adminReport.summary.lateToday}</span>
                 <span className="att-kpi-label">Late Arrivals Today</span>
               </div>
-              <div className="att-kpi-card flex flex-col justify-between">
+              <div
+                className={`att-kpi-card flex flex-col justify-between cursor-pointer transition-all border ${
+                  adminFilterType === 'ABSENT'
+                    ? 'ring-2 ring-rose-500/50 bg-rose-500/10 border-rose-500/30'
+                    : 'border-white/5'
+                }`}
+                onClick={() => setAdminFilterType(adminFilterType === 'ABSENT' ? 'ALL' : 'ABSENT')}
+              >
                 <span className="att-kpi-value text-rose-400">{adminReport.summary.absentToday}</span>
                 <span className="att-kpi-label">Absent Today</span>
               </div>
-              <div className="att-kpi-card flex flex-col justify-between">
+              <div
+                className={`att-kpi-card flex flex-col justify-between cursor-pointer transition-all border ${
+                  adminFilterType === 'ALL'
+                    ? 'ring-2 ring-indigo-500/50 bg-indigo-500/10 border-indigo-500/30'
+                    : 'border-white/5'
+                }`}
+                onClick={() => setAdminFilterType('ALL')}
+              >
                 <span className="att-kpi-value text-indigo-400">{adminReport.summary.totalEmployees}</span>
                 <span className="att-kpi-label">Total Strength</span>
               </div>
@@ -666,16 +923,110 @@ export default function AttendanceManagement() {
           <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-slate-900/40">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <div>
-                <h3 className="text-lg font-bold text-white">All Employee Attendance</h3>
-                <p className="text-xs text-gray-400 mt-1">Review active logs and check GPS/Selfie details</p>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  All Employee Attendance
+                  <span className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+                    Live
+                  </span>
+                </h3>
+                <p className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+                  Review active logs and check GPS/Selfie details
+                  <span className="text-gray-600">•</span>
+                  <span className="text-gray-500">
+                    Updated {secondsSinceRefresh < 5 ? 'just now' : `${secondsSinceRefresh}s ago`}
+                  </span>
+                  <button
+                    onClick={() => {
+                      fetchAdminRecords();
+                      fetchAdminReport();
+                      fetchTodayStatus();
+                      setLastRefresh(new Date());
+                      setSecondsSinceRefresh(0);
+                    }}
+                    className="text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer underline underline-offset-2"
+                    title="Refresh now"
+                  >
+                    Refresh
+                  </button>
+                </p>
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="date"
-                  value={adminFilterDate}
-                  onChange={(e) => setAdminFilterDate(e.target.value)}
-                  className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs px-3 py-2 outline-none"
-                />
+              <div className="flex flex-col sm:flex-row gap-3 items-end sm:items-center">
+                {/* Manual Attendance Button */}
+                <button
+                  onClick={() => setShowManualModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md"
+                  title="Add manual attendance entry for any employee"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Manual Attendance
+                </button>
+                {/* Export Button — Super Admin only */}
+                {isSuperAdmin && (
+                  <button
+                    onClick={downloadAttendanceCSV}
+                    disabled={filteredRecords.length === 0}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md"
+                    title="Download filtered records as CSV/Excel"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Export CSV
+                  </button>
+                )}
+                {/* Filter Mode Toggle */}
+                <div className="flex bg-slate-800/80 rounded-lg p-0.5 border border-white/5">
+                  <button
+                    onClick={() => setAdminFilterMode('single')}
+                    className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                      adminFilterMode === 'single'
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Single Date
+                  </button>
+                  <button
+                    onClick={() => setAdminFilterMode('range')}
+                    className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                      adminFilterMode === 'range'
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Date Range
+                  </button>
+                </div>
+
+                {/* Date Input(s) */}
+                {adminFilterMode === 'single' ? (
+                  <input
+                    type="date"
+                    value={adminFilterDate}
+                    onChange={(e) => setAdminFilterDate(e.target.value)}
+                    className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs px-3 py-2 outline-none"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-gray-500 uppercase font-bold mb-1">From</span>
+                      <input
+                        type="date"
+                        value={adminStartDate}
+                        onChange={(e) => setAdminStartDate(e.target.value)}
+                        className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs px-3 py-1.5 outline-none"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-gray-500 uppercase font-bold mb-1">To</span>
+                      <input
+                        type="date"
+                        value={adminEndDate}
+                        onChange={(e) => setAdminEndDate(e.target.value)}
+                        className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs px-3 py-1.5 outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -693,23 +1044,26 @@ export default function AttendanceManagement() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-sm">
-                  {adminRecords.length === 0 ? (
+                  {filteredRecords.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-6 text-center text-gray-500 font-medium">
-                        No employees checked in on this date.
+                        No employees found matching the filter on this date.
                       </td>
                     </tr>
                   ) : (
-                    adminRecords.map((record) => (
+                    filteredRecords.map((record) => (
                       <tr key={record.id} className="hover:bg-white/5">
                         <td className="py-3.5">
                           <div className="font-semibold text-white">{record.employee?.name}</div>
                           <div className="text-[10px] text-gray-400">
                             {record.employee?.employeeCode} • {record.employee?.department?.name || 'General'}
+                            {adminFilterMode === 'range' && ` • ${new Date(record.date).toLocaleDateString()}`}
                           </div>
                         </td>
                         <td className="py-3.5 text-gray-300">
-                          {new Date(record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {record.checkInTime
+                            ? new Date(record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            : '--'}
                           {record.lateBy && (
                             <span className="text-[10px] text-rose-400 font-bold ml-2">
                               (+{record.lateBy}m late)
@@ -734,22 +1088,28 @@ export default function AttendanceManagement() {
                         </td>
                         <td className="py-3.5">
                           <div className="flex gap-2">
-                            {/* GPS Status */}
-                            <span
-                              className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
-                                record.isWithinGeofence
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                              }`}
-                              title={`In: ${record.checkInLat},${record.checkInLng}`}
-                            >
-                              {record.isWithinGeofence ? 'Geofenced' : 'Geo Breach'}
-                            </span>
-                            {/* Selfie Status */}
-                            {(record.checkInSelfie || record.checkOutSelfie) && (
-                              <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1">
-                                <Camera className="w-2.5 h-2.5" /> Selfie
-                              </span>
+                            {record.status === 'ABSENT' ? (
+                              <span className="text-gray-500 font-medium text-xs">--</span>
+                            ) : (
+                              <>
+                                {/* GPS Status */}
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                    record.isWithinGeofence
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                  }`}
+                                  title={`In: ${record.checkInLat},${record.checkInLng}`}
+                                >
+                                  {record.isWithinGeofence ? 'Geofenced' : 'Geo Breach'}
+                                </span>
+                                {/* Selfie Status */}
+                                {(record.checkInSelfie || record.checkOutSelfie) && (
+                                  <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1">
+                                    <Camera className="w-2.5 h-2.5" /> Selfie
+                                  </span>
+                                )}
+                              </>
                             )}
                           </div>
                         </td>
@@ -757,9 +1117,11 @@ export default function AttendanceManagement() {
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               record.status === 'CHECKED_OUT'
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                 : record.status === 'ON_BREAK'
                                 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : record.status === 'ABSENT'
+                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                                 : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
                             }`}
                           >
@@ -770,6 +1132,65 @@ export default function AttendanceManagement() {
                               Half Day
                             </span>
                           )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'wfh' && isAdmin && (
+        <div className="flex flex-col gap-6">
+          <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-slate-900/40">
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-white">Work From Home (WFH) Permissions</h3>
+              <p className="text-xs text-gray-400 mt-1">
+                Toggle WFH permission for individual employees. When enabled, geofencing coordinates checks are skipped.
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                    <th className="pb-3">Employee Code</th>
+                    <th className="pb-3">Name</th>
+                    <th className="pb-3">Email & Mobile</th>
+                    <th className="pb-3">Department</th>
+                    <th className="pb-3 text-center">Allow WFH</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-sm">
+                  {employees.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-6 text-center text-gray-500 font-medium">
+                        No active employees found.
+                      </td>
+                    </tr>
+                  ) : (
+                    employees.map((emp) => (
+                      <tr key={emp.id} className="hover:bg-white/5">
+                        <td className="py-3.5 font-mono text-gray-300">{emp.employeeCode}</td>
+                        <td className="py-3.5 font-semibold text-white">{emp.name}</td>
+                        <td className="py-3.5 text-gray-400 text-xs">
+                          <div>{emp.email}</div>
+                          <div>{emp.mobile}</div>
+                        </td>
+                        <td className="py-3.5 text-gray-300">{emp.department?.name || 'General'}</td>
+                        <td className="py-3.5 text-center">
+                          <label className="inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={emp.allowWFH || false}
+                              onChange={() => handleToggleWFH(emp.id, emp.allowWFH || false)}
+                              className="sr-only peer"
+                            />
+                            <div className="relative w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-gray-400 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 peer-checked:after:bg-white"></div>
+                          </label>
                         </td>
                       </tr>
                     ))
@@ -837,6 +1258,89 @@ export default function AttendanceManagement() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {showManualModal && (
+        <div className="att-selfie-overlay">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 flex flex-col gap-4 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-white font-bold text-base flex items-center gap-2">
+              <Plus className="w-5 h-5 text-indigo-400" />
+              Mark Manual Attendance
+            </h3>
+            <p className="text-xs text-gray-400">
+              Create or override an attendance record manually. Office rules (late, early exit, half-day) will be computed automatically.
+            </p>
+
+            <form onSubmit={handleManualAttendanceSubmit} className="flex flex-col gap-4 mt-2">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-gray-300 font-bold">Select Employee</label>
+                <select
+                  required
+                  value={manualEmpId}
+                  onChange={(e) => setManualEmpId(e.target.value)}
+                  className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs p-2.5 outline-none"
+                >
+                  <option value="">-- Choose Employee --</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.employeeCode})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-gray-300 font-bold">Select Date</label>
+                <input
+                  type="date"
+                  required
+                  value={manualDate}
+                  onChange={(e) => setManualDate(e.target.value)}
+                  className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs p-2.5 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs text-gray-300 font-bold">Check-In Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={manualCheckIn}
+                    onChange={(e) => setManualCheckIn(e.target.value)}
+                    className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs p-2.5 outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs text-gray-300 font-bold">Check-Out Time (Optional)</label>
+                  <input
+                    type="time"
+                    value={manualCheckOut}
+                    onChange={(e) => setManualCheckOut(e.target.value)}
+                    className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs p-2.5 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-4 border-t border-white/5 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowManualModal(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-gray-300 font-bold text-xs rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl cursor-pointer disabled:opacity-50"
+                >
+                  {actionLoading ? 'Saving...' : 'Submit Attendance'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

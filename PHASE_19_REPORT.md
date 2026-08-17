@@ -21,24 +21,35 @@ Phase 19 implements a complete **Geofencing & Selfie-based Attendance Management
 - `POST /api/v1/attendance/break/end` — Mark end of employee break and calculate duration.
 - `GET /api/v1/attendance/today` — Retrieve today's check-in status and logs for the active user.
 - `GET /api/v1/attendance/my` — Fetch check-in history filtered by month and year for self-service logs.
-- `GET /api/v1/attendance/all` — Retrieve daily check-in registry of all employees (restricted to Admin/Accounts).
+- `GET /api/v1/attendance/all` — Retrieve daily check-in registry of all employees (restricted to Admin/Accounts). For single-date queries, this now dynamically merges all `ACTIVE` employees, returning virtual records with status `ABSENT` for employees who have not checked in yet.
 - `GET /api/v1/attendance/report` — Monthly aggregated attendance summary reports including late counts and working durations.
 
 ### 3. Frontend Self-Service Portal (`AttendanceManagement.tsx`)
 - Includes live digital clock widget, geofence boundary dot indicator (inside/outside), circle Check-In/Check-Out action buttons, break play/stop timer controls, and today's timeline trace. Displays explicit **"Half Day"** badges in the log history list.
 - Handles responsive screen layout, automatically triggering the native camera capturing stream (`navigator.mediaDevices.getUserMedia`) for photo verification on mobile width screens.
 
-### 4. Admin Dashboard Metrics (`AttendanceManagement.tsx`)
+### 4. Admin Dashboard Metrics & KPI Filtering (`AttendanceManagement.tsx`)
 - Displays real-time presence indicators (Present today, Late arrivals, Absent count, Total Strength).
-- Lists all active employee records showing geofence validation, selfie status, and **"Half Day"** indicator badges.
+- **Interactive KPI Filters:** The top KPI cards act as functional buttons with cursor pointers and smooth hover transitions. Clicking a card dynamically filters the employee directory table below:
+  - **Present Today:** Shows active checked-in employees.
+  - **Late Arrivals Today:** Shows employees checked in late (`lateBy > 0`).
+  - **Absent Today:** Shows employees who haven't checked in (virtual `ABSENT` status).
+  - **Total Strength:** Resets the list to display all employees.
+- Highlights the selected filter card with a premium colored active ring and shadow matching the dashboard theme.
+- **Date Range Reporting Mode:** Admins can toggle between 'Single Date' and 'Date Range' modes. In Date Range mode, they can filter logs by a custom 'From' and 'To' date picker, fetching all logs for the specified range. The record dates are automatically displayed next to the employee codes in the table rows for tracking clarity.
+- **CSV/Excel Export:** Integrated an "Export CSV" action button allowing admins to instantly generate and download a spreadsheet-compatible CSV sheet of the currently filtered attendance logs on the client side, with status column modifiers appending "(Half Day)" for affected records.
+- **Work From Home (WFH) Controls:** Integrated employee-specific `allowWFH` state variables. Admins can toggle this checkbox for any employee under the new "WFH Settings" tab. When enabled, geofencing checks are bypassed on both frontend (allowing check-in/out and rendering "Work From Home Allowed" status) and backend (allowing check-ins from anywhere). When disabled, check-in attempts outside the boundary are strictly blocked.
+- **Flexible Breaks:** Removed strict backend time-of-day checks during `startBreak` so employees can click the break button at any point during their shift (while still calculating total break durations correctly against limits).
+- **Manual Attendance Overrides:** Super Admins can click "+ Manual Attendance" next to export controls to create or override attendance logs for any employee. The backend will automatically map calculations for late arrival, early departures, and half-day status relative to the current shift timings configuration.
+- Lists all active employee records showing geofence validation, selfie status, **"Half Day"** indicators, and distinct custom red badges for **"ABSENT"** status.
 
 ### 5. Admin timing configuration (`AttendanceConfig.tsx`)
 - Input parameters for shifts start/end, grace limits, break duration, half-day minimum work hours threshold, and geofence coordinates.
 - Integrates browser Geolocation mapping tool to automatically populate active location coordinates in 1 click.
 
-### 6. Role-based Access Restrictions (Super Admin Protection)
-- Restricts sidebar menu visibility and router path protection for `/attendance-config` strictly to Super Admins.
-- Hides the "Attendance Dashboard" admin logs analytics tab inside `/attendance` from standard `ADMIN` users, allowing only `SUPER_ADMIN` to inspect team logs.
+### 6. Role-based Access Restrictions (Admin / Super Admin Protection)
+- Allows standard `ADMIN` and `SUPER_ADMIN` roles to access sidebar menu and router path protection for `/attendance-config`.
+- Allows standard `ADMIN` and `SUPER_ADMIN` roles to inspect the "Attendance Dashboard", "WFH Settings" tab, and manually override/create team logs.
 
 ---
 

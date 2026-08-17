@@ -250,6 +250,7 @@ model Employee {
   address       String
   photo         String?
   status        String   @default("ACTIVE")
+  allowWFH      Boolean  @default(false) @map("allow_wfh")
   departmentId  String?  @map("department_id")
   designationId String?  @map("designation_id")
   createdAt     DateTime @default(now()) @map("created_at")
@@ -557,6 +558,10 @@ model PayrollItem {
   grossEarnings   Float     @map("gross_earnings")
   totalDeductions Float     @map("total_deductions")
   netSalary       Float     @map("net_salary")
+  lwpDays         Float     @default(0.0) @map("lwp_days")
+  absentDays      Float     @default(0.0) @map("absent_days")
+  halfDays        Float     @default(0.0) @map("half_days")
+  unpaidDeductions Float    @default(0.0) @map("unpaid_deductions")
   status          String    @default("PENDING") // "PENDING", "PAID"
   paidAccountId   String?   @map("paid_account_id")
   paidAt          DateTime? @map("paid_at")
@@ -813,6 +818,7 @@ model AttendanceRecord {
   earlyExitBy      Int?      @map("early_exit_by") // minutes early
   isWithinGeofence Boolean   @default(true) @map("is_within_geofence")
   isHalfDay        Boolean   @default(false) @map("is_half_day")
+  checkOutNote     String?   @map("check_out_note") // Optional system note e.g. auto-checkout
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 

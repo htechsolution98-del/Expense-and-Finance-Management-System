@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { Wallet, ArrowDownLeft, ArrowUpRight, Repeat, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface Account {
@@ -55,9 +56,12 @@ export const Payments: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    loadMasterData();
-  }, []);
+  // Initial load
+  useEffect(() => { loadMasterData(); }, []);
+
+  // Auto-refresh master data every 30s
+  useAutoRefresh(loadMasterData, 30000);
+
 
   const resetForm = () => {
     setAmount('');

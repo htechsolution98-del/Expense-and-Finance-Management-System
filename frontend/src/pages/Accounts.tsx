@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { Plus, Landmark, Wallet, RefreshCw, AlertCircle, X, PiggyBank, Edit2, Trash2 } from 'lucide-react';
 
 interface Account {
@@ -55,9 +56,11 @@ export const Accounts: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchAccounts();
-  }, []);
+  // Initial load
+  useEffect(() => { fetchAccounts(); }, []);
+
+  // Auto-refresh accounts every 30s
+  useAutoRefresh(fetchAccounts, 30000);
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();

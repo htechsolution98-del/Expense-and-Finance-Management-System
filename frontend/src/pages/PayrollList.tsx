@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { api } from '../services/api';
 import { 
   Plus, RefreshCw, Wallet, CheckCircle, AlertCircle, X, 
@@ -30,6 +31,10 @@ interface PayrollItem {
   grossEarnings: number;
   totalDeductions: number;
   netSalary: number;
+  lwpDays: number;
+  absentDays: number;
+  halfDays: number;
+  unpaidDeductions: number;
   status: string;
   paidAccountId: string | null;
   paidAt: string | null;
@@ -131,10 +136,13 @@ export const PayrollList: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchPayrolls();
     fetchAccounts();
     fetchCompanyInfo();
   }, []);
+
+  // Auto-refresh payrolls every 30s
+  useAutoRefresh(fetchPayrolls, 30000);
+
 
   const handlePrintSlip = (item: PayrollItem) => {
     const printWindow = window.open('', '', 'width=800,height=900');
@@ -599,13 +607,25 @@ export const PayrollList: React.FC = () => {
                       <tr key={item.id} className="hover:bg-white/1">
                         <td className="px-4 py-3">
                           <span className="font-bold text-white block">{item.employee.name}</span>
-                          <span className="text-[9px] text-gray-500 font-mono">{item.employee.employeeCode}</span>
+                          <span className="text-[9px] text-gray-500 font-mono block">
+                            {item.employee.employeeCode}
+                            {(item.absentDays > 0 || item.lwpDays > 0 || item.halfDays > 0) && (
+                              <span className="text-amber-400 font-semibold ml-2">
+                                (Absent: {item.absentDays}d | LWP: {item.lwpDays}d | Half: {item.halfDays}d)
+                              </span>
+                            )}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-right text-gray-300 font-mono">
                           ₹{item.grossEarnings.toLocaleString()}
                         </td>
                         <td className="px-4 py-3 text-right text-red-400/80 font-mono">
                           ₹{item.totalDeductions.toLocaleString()}
+                          {item.unpaidDeductions > 0 && (
+                            <span className="text-[9px] text-rose-400 font-bold block" title="Loss of Pay">
+                              -₹{item.unpaidDeductions.toLocaleString()} LOP
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right font-black font-mono text-white">
                           ₹{item.netSalary.toLocaleString()}

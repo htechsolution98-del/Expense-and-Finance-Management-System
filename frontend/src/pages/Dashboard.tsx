@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import {
   Wallet,
   Clock,
@@ -52,36 +53,35 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        if (hasReportView) {
-          // Admin/Accounts View: Load full financial summary reports
-          const [sumRes, cfRes, catRes] = await Promise.all([
-            api.get('/reports/dashboard-summary'),
-            api.get('/reports/cash-flow'),
-            api.get('/reports/expenses-by-category')
-          ]);
-          setSummary(sumRes.data.data);
-          setCashFlow(cfRes.data.data);
-          setCategories(catRes.data.data.categories || []);
-        } else {
-          // Staff View: Load their own submitted expenses
-          const expRes = await api.get('/expenses');
-          setStaffExpenses(expRes.data.data || []);
-        }
-      } catch (err: any) {
-        console.error(err);
-        setError(err.response?.data?.message || 'Failed to fetch dashboard data.');
-      } finally {
-        setLoading(false);
+  const loadDashboardData = useCallback(async () => {
+    setError('');
+    try {
+      if (hasReportView) {
+        const [sumRes, cfRes, catRes] = await Promise.all([
+          api.get('/reports/dashboard-summary'),
+          api.get('/reports/cash-flow'),
+          api.get('/reports/expenses-by-category')
+        ]);
+        setSummary(sumRes.data.data);
+        setCashFlow(cfRes.data.data);
+        setCategories(catRes.data.data.categories || []);
+      } else {
+        const expRes = await api.get('/expenses');
+        setStaffExpenses(expRes.data.data || []);
       }
-    };
-
-    loadDashboardData();
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to fetch dashboard data.');
+    } finally {
+      setLoading(false);
+    }
   }, [hasReportView]);
+
+  // Initial load
+  useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
+
+  // Auto-refresh every 30s
+  useAutoRefresh(loadDashboardData, 30000, [hasReportView]);
 
   const fmt = (n: number) => `₹${(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 

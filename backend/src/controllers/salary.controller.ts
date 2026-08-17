@@ -350,13 +350,121 @@ export const generatePayroll = async (
         },
       });
 
+      // Get all company holidays in that month
+      const totalDaysInMonth = new Date(year, month, 0).getDate();
+      const holidays = await tx.holiday.findMany({
+        where: {
+          companyId,
+          date: {
+            gte: new Date(year, month - 1, 1, 0, 0, 0),
+            lte: new Date(year, month - 1, totalDaysInMonth, 23, 59, 59),
+          },
+        },
+      });
+
       // 2. Create slips
       for (const emp of activeEmpWithStructures) {
         const struct = emp.salaryStructures[0];
         const grossEarnings =
           struct.basic + struct.hra + struct.conveyance + struct.medical + struct.special;
         const totalDeductions = struct.pf + struct.professionalTax + struct.tds;
-        const netSalary = grossEarnings - totalDeductions;
+        const netBefore = grossEarnings - totalDeductions;
+
+        // Fetch leave requests for this employee in that month
+        const leaveRequests = await tx.leaveRequest.findMany({
+          where: {
+            employeeId: emp.id,
+            status: 'APPROVED',
+            OR: [
+              {
+                fromDate: { lte: new Date(year, month - 1, totalDaysInMonth, 23, 59, 59) },
+                toDate: { gte: new Date(year, month - 1, 1, 0, 0, 0) },
+              },
+            ],
+          },
+          include: { leaveType: true },
+        });
+
+        // Fetch attendance records for this employee in that month
+        const attendanceRecords = await tx.attendanceRecord.findMany({
+          where: {
+            employeeId: emp.id,
+            date: {
+              gte: new Date(year, month - 1, 1, 0, 0, 0),
+              lte: new Date(year, month - 1, totalDaysInMonth, 23, 59, 59),
+            },
+          },
+        });
+
+        let lwpDays = 0;
+        let absentDays = 0;
+        let halfDays = 0;
+
+        for (let d = 1; d <= totalDaysInMonth; d++) {
+          const currentDate = new Date(year, month - 1, d);
+          const dayOfWeek = currentDate.getDay(); // 0 is Sunday
+
+          // 1. Weekend Check (Sunday)
+          if (dayOfWeek === 0) {
+            continue; // Sunday is a paid day off (no deduction)
+          }
+
+          // 2. Company Holiday Check
+          const isHoliday = holidays.some((h) => {
+            const hDate = new Date(h.date);
+            return (
+              hDate.getFullYear() === year &&
+              hDate.getMonth() === month - 1 &&
+              hDate.getDate() === d
+            );
+          });
+          if (isHoliday) {
+            continue;
+          }
+
+          // 3. Attendance Check
+          const att = attendanceRecords.find((a) => {
+            const aDate = new Date(a.date);
+            return (
+              aDate.getFullYear() === year &&
+              aDate.getMonth() === month - 1 &&
+              aDate.getDate() === d
+            );
+          });
+
+          if (att) {
+            if (att.isHalfDay) {
+              halfDays += 1;
+            }
+            continue;
+          }
+
+          // 4. Approved Leave Check
+          const leave = leaveRequests.find((l) => {
+            const start = new Date(l.fromDate);
+            const end = new Date(l.toDate);
+            // normalize current date
+            const currTime = new Date(year, month - 1, d, 12, 0, 0).getTime();
+            return currTime >= start.getTime() && currTime <= end.getTime();
+          });
+
+          if (leave) {
+            if (!leave.leaveType.isPaid) {
+              lwpDays += 1;
+            }
+            continue;
+          }
+
+          // 5. If no check-in, no holiday, no weekend, and no leave -> Absent!
+          absentDays += 1;
+        }
+
+        const dailyRate = netBefore / totalDaysInMonth;
+        const unpaidDeductions =
+          Math.round(
+            (lwpDays * dailyRate + absentDays * dailyRate + halfDays * 0.5 * dailyRate) * 100
+          ) / 100;
+        const netSalary = Math.max(0, Math.round((netBefore - unpaidDeductions) * 100) / 100);
 
         await tx.payrollItem.create({
           data: {
@@ -373,6 +481,10 @@ export const generatePayroll = async (
             grossEarnings,
             totalDeductions,
             netSalary,
+            lwpDays,
+            absentDays,
+            halfDays,
+            unpaidDeductions,
             status: 'PENDING',
           },
         });

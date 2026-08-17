@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import '../styles/employeePortal.css';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -51,6 +52,10 @@ interface SalarySlip {
   grossEarnings: number;
   totalDeductions: number;
   netSalary: number;
+  lwpDays: number;
+  absentDays: number;
+  halfDays: number;
+  unpaidDeductions: number;
   status: string;
   paidAt: string | null;
   payroll: { month: number; year: number; payrollNo: string; company?: any };
@@ -130,6 +135,9 @@ export default function EmployeePortal() {
   }, [canVerifyBank]);
 
   useEffect(() => { loadPortalData(); }, [loadPortalData]);
+
+  // Auto-refresh portal data every 30s
+  useAutoRefresh(loadPortalData, 30000);
 
   // Open Edit Form pre-filled
   const handleOpenBankModal = () => {
@@ -335,20 +343,20 @@ export default function EmployeePortal() {
                 <tr>
                   <td>Medical Allowance</td>
                   <td style="text-align:right;">₹${(selectedSlip.medical || 0).toLocaleString()}</td>
-                  <td>-</td>
-                  <td style="text-align:right;">-</td>
+                  <td>${selectedSlip.unpaidDeductions > 0 ? 'Loss of Pay (LOP)' : '-'}</td>
+                  <td style="text-align:right; ${selectedSlip.unpaidDeductions > 0 ? 'color:#c92a2a;' : ''}">${selectedSlip.unpaidDeductions > 0 ? `₹${selectedSlip.unpaidDeductions.toLocaleString()}` : '-'}</td>
                 </tr>
                 <tr>
                   <td>Special Allowance</td>
                   <td style="text-align:right;">₹${(selectedSlip.special || 0).toLocaleString()}</td>
-                  <td>-</td>
+                  <td>${selectedSlip.unpaidDeductions > 0 ? `LWP: ${selectedSlip.lwpDays}d | Abs: ${selectedSlip.absentDays}d | Half: ${selectedSlip.halfDays}d` : '-'}</td>
                   <td style="text-align:right;">-</td>
                 </tr>
                 <tr class="total-row">
                   <td>Gross Earnings</td>
                   <td style="text-align:right;">₹${(selectedSlip.grossEarnings || 0).toLocaleString()}</td>
                   <td>Total Deductions</td>
-                  <td style="text-align:right; color:#c92a2a;">₹${(selectedSlip.totalDeductions || 0).toLocaleString()}</td>
+                  <td style="text-align:right; color:#c92a2a;">₹${((selectedSlip.totalDeductions || 0) + (selectedSlip.unpaidDeductions || 0)).toLocaleString()}</td>
                 </tr>
               </tbody>
             </table>
@@ -761,7 +769,20 @@ export default function EmployeePortal() {
                       <tr><td>Provident Fund (PF)</td><td className="text-right">{fmt(selectedSlip.pf)}</td></tr>
                       <tr><td>Professional Tax (PT)</td><td className="text-right">{fmt(selectedSlip.professionalTax)}</td></tr>
                       <tr><td>Tax Deducted at Source (TDS)</td><td className="text-right">{fmt(selectedSlip.tds)}</td></tr>
-                      <tr className="payslip-total-row"><td>TOTAL DEDUCTIONS</td><td className="text-right">{fmt(selectedSlip.totalDeductions)}</td></tr>
+                      {selectedSlip.unpaidDeductions > 0 && (
+                        <>
+                          <tr>
+                            <td className="text-rose-400 font-bold">Loss of Pay (LOP)</td>
+                            <td className="text-right text-rose-400 font-bold">{fmt(selectedSlip.unpaidDeductions)}</td>
+                          </tr>
+                          <tr>
+                            <td colSpan={2} className="text-[10px] text-gray-400 italic pt-0 pb-1">
+                              (LWP: {selectedSlip.lwpDays}d | Absent: {selectedSlip.absentDays}d | Half: {selectedSlip.halfDays}d)
+                            </td>
+                          </tr>
+                        </>
+                      )}
+                      <tr className="payslip-total-row"><td>TOTAL DEDUCTIONS</td><td className="text-right">{fmt(selectedSlip.totalDeductions + (selectedSlip.unpaidDeductions || 0))}</td></tr>
                     </tbody>
                   </table>
                 </div>

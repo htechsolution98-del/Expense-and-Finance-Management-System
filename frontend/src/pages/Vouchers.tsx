@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { api } from '../services/api';
 import { 
   Receipt, Plus, Search, Loader2, CheckCircle, AlertCircle, X,
@@ -129,9 +130,12 @@ export const Vouchers: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Initial load
+  useEffect(() => { loadData(); }, []);
+
+  // Auto-refresh voucher data every 30s
+  useAutoRefresh(loadData, 30000);
+
 
   const resetForm = () => {
     setAccountId('');

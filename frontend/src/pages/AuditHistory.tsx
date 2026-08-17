@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import '../styles/auditHistory.css';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -111,6 +112,9 @@ export default function AuditHistory() {
   }, [selectedModule, selectedAction, search, page]);
 
   useEffect(() => { fetchAuditLogs(); }, [fetchAuditLogs]);
+
+  // Auto-refresh audit logs every 30s
+  useAutoRefresh(fetchAuditLogs, 30000, [selectedModule, selectedAction, search, page]);
 
   return (
     <div className="aud-root">

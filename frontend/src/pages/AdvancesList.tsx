@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import '../styles/advances.css';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -172,6 +173,9 @@ export default function AdvancesList() {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  // Auto-refresh advances every 30s
+  useAutoRefresh(loadAll, 30000);
 
   // ── Create/Edit Advance ─────────────────────────────────────────────────────
   const handleOpenEdit = (adv: Advance) => {

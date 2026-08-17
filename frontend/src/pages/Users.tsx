@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import {
   Plus,
   Search,
@@ -198,6 +199,9 @@ const permissionCategories = [
       useEffect(() => {
         fetchData();
       }, []);
+
+      // Auto-refresh users/employees every 30s
+      useAutoRefresh(fetchData, 30000);
 
       // ── Extra Permissions Handlers ────────────────────────────────────────────
       const openExtraPermsModal = async (user: User) => {

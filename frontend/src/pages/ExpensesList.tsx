@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { 
   Plus, Receipt, RefreshCw, Wallet, AlertCircle, X, Shield, Clock, Trash2, Edit
 } from 'lucide-react';
@@ -134,9 +135,12 @@ export const ExpensesList: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchExpenses();
     fetchMetadata();
   }, []);
+
+  // Auto-refresh expenses every 30s
+  useAutoRefresh(fetchExpenses, 30000);
+
 
   const handleCreateCategory = async () => {
     const name = window.prompt('Enter new Expense Category name:');

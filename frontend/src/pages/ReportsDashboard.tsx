@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import '../styles/reports.css';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -115,6 +116,9 @@ export default function ReportsDashboard() {
   }, []);
 
   useEffect(() => { loadReportsData(); }, [loadReportsData]);
+
+  // Auto-refresh reports every 30s
+  useAutoRefresh(loadReportsData, 30000);
 
   // CSV Export Trigger — uses authenticated fetch + blob since window.open can't send auth headers
   const handleExportCSV = async (type: string) => {

@@ -2,6 +2,7 @@ import * as dotenv from 'dotenv';
 import app from './app';
 import { prisma } from './config/database';
 import { logger } from './config/logger';
+import { startAutoCheckoutCron } from './jobs/autoCheckout.job';
 
 dotenv.config();
 
@@ -64,6 +65,8 @@ Error details: ${(dbErr as Error).message}
       logger.info(
         `Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`
       );
+      // 3. Start background cron jobs
+      startAutoCheckoutCron();
     });
 
     // 3. Graceful shutdown handler

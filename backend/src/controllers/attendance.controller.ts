@@ -151,14 +151,34 @@ export const checkIn = async (
       throw new BadRequestError('You have already checked in today.');
     }
 
+    // Get employee to check WFH permission
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+      select: { name: true, allowWFH: true },
+    });
+    if (!employee) throw new BadRequestError('Employee profile not found.');
+
     // Get config
     const config = await prisma.attendanceConfig.findUnique({ where: { companyId } });
 
     // Geofence check
     let isWithinGeofence = true;
-    if (config?.geoFencingEnabled && config.geoLat != null && config.geoLng != null && latitude && longitude) {
-      const distance = haversineDistance(config.geoLat, config.geoLng, latitude, longitude);
-      isWithinGeofence = distance <= config.geoRadiusMeters;
+    if (config?.geoFencingEnabled && config.geoLat != null && config.geoLng != null) {
+      if (latitude && longitude) {
+        const distance = haversineDistance(config.geoLat, config.geoLng, latitude, longitude);
+        isWithinGeofence = distance <= config.geoRadiusMeters;
+        if (!isWithinGeofence) {
+          if (!employee.allowWFH) {
+            throw new BadRequestError('Check-in blocked: You are outside the office geofence boundary and do not have Work From Home permission.');
+          }
+          // If WFH is allowed, treat as geofence compliant
+          isWithinGeofence = true;
+        }
+      } else {
+        if (!employee.allowWFH) {
+          throw new BadRequestError('Check-in blocked: Geolocation is required for attendance verification.');
+        }
+      }
     }
 
     // Calculate late
@@ -308,20 +328,6 @@ export const startBreak = async (
     if (record.status === 'CHECKED_OUT') throw new BadRequestError('You have already checked out.');
     if (record.status === 'ON_BREAK') throw new BadRequestError('You are already on a break.');
 
-    const companyId = req.user!.companyId;
-    const config = await prisma.attendanceConfig.findUnique({ where: { companyId } });
-
-    // Validate current time is within breakStartTime and breakEndTime window
-    if (config && config.breakStartTime && config.breakEndTime) {
-      const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const startMinutes = timeToMinutes(config.breakStartTime);
-      const endMinutes = timeToMinutes(config.breakEndTime);
-      if (currentMinutes < startMinutes || currentMinutes > endMinutes) {
-        throw new BadRequestError(`Breaks are only allowed between ${config.breakStartTime} and ${config.breakEndTime}.`);
-      }
-    }
-
     const breakRecord = await prisma.attendanceBreak.create({
       data: {
         attendanceId: record.id,
@@ -403,7 +409,12 @@ export const getTodayStatus = async (
       include: { breaks: { orderBy: { breakStart: 'asc' } } },
     });
 
-    res.json({ status: 'success', data: record });
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+      select: { allowWFH: true },
+    });
+
+    res.json({ status: 'success', data: record, allowWFH: employee?.allowWFH || false });
   } catch (error) {
     next(error);
   }
@@ -465,11 +476,12 @@ export const getAllAttendance = async (
     const companyId = req.user!.companyId;
     const { date, startDate, endDate } = req.query;
 
+    let targetDate = getTodayDate();
     let dateFilter: any = {};
     if (date) {
       const [year, month, day] = (date as string).split('-').map(Number);
-      const d = new Date(year, month - 1, day);
-      dateFilter = { date: d };
+      targetDate = new Date(year, month - 1, day);
+      dateFilter = { date: targetDate };
     } else if (startDate && endDate) {
       const [sy, sm, sd] = (startDate as string).split('-').map(Number);
       const [ey, em, ed] = (endDate as string).split('-').map(Number);
@@ -481,7 +493,7 @@ export const getAllAttendance = async (
       };
     } else {
       // Default: today
-      dateFilter = { date: getTodayDate() };
+      dateFilter = { date: targetDate };
     }
 
     const records = await prisma.attendanceRecord.findMany({
@@ -494,6 +506,69 @@ export const getAllAttendance = async (
       },
       orderBy: { checkInTime: 'asc' },
     });
+
+    if (date || (!startDate && !endDate)) {
+      // Single date query: merge active employees to show absent status
+      const activeEmployees = await prisma.employee.findMany({
+        where: { companyId, status: 'ACTIVE' },
+        select: {
+          id: true,
+          name: true,
+          employeeCode: true,
+          department: { select: { name: true } },
+        },
+      });
+
+      const recordMap = new Map<string, typeof records[0]>();
+      for (const record of records) {
+        recordMap.set(record.employeeId, record);
+      }
+
+      const mergedRecords = activeEmployees.map((emp) => {
+        const existingRecord = recordMap.get(emp.id);
+        if (existingRecord) {
+          return existingRecord;
+        }
+        return {
+          id: `absent-${emp.id}-${date || 'today'}`,
+          employeeId: emp.id,
+          companyId,
+          date: targetDate,
+          checkInTime: null,
+          checkOutTime: null,
+          checkInLat: null,
+          checkInLng: null,
+          checkOutLat: null,
+          checkOutLng: null,
+          checkInSelfie: null,
+          checkOutSelfie: null,
+          status: 'ABSENT',
+          lateBy: null,
+          earlyExitBy: null,
+          isWithinGeofence: false,
+          isHalfDay: false,
+          totalWorkMinutes: null,
+          totalBreakMinutes: null,
+          breaks: [],
+          employee: emp,
+        };
+      });
+
+      // Sort: Present first (sorted by check-in time), then Absent (alphabetically by name)
+      mergedRecords.sort((a, b) => {
+        if (a.status === 'ABSENT' && b.status !== 'ABSENT') return 1;
+        if (a.status !== 'ABSENT' && b.status === 'ABSENT') return -1;
+        if (a.status !== 'ABSENT' && b.status !== 'ABSENT') {
+          const aTime = a.checkInTime ? new Date(a.checkInTime).getTime() : 0;
+          const bTime = b.checkInTime ? new Date(b.checkInTime).getTime() : 0;
+          return aTime - bTime;
+        }
+        return (a.employee?.name || '').localeCompare(b.employee?.name || '');
+      });
+
+      res.json({ status: 'success', data: mergedRecords });
+      return;
+    }
 
     res.json({ status: 'success', data: records });
   } catch (error) {
@@ -603,3 +678,147 @@ export const getAttendanceReport = async (
     next(error);
   }
 };
+
+export const toggleEmployeeWFH = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (req.user!.role !== 'SUPER_ADMIN' && req.user!.role !== 'ADMIN') {
+      throw new ForbiddenError('Only Admin or Super Admin can toggle WFH settings.');
+    }
+
+    const { id } = req.params;
+    const { allowWFH } = req.body;
+
+    const employee = await prisma.employee.update({
+      where: { id },
+      data: { allowWFH },
+    });
+
+    res.json({
+      status: 'success',
+      message: `WFH permission updated for ${employee.name}.`,
+      data: employee,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createManualAttendance = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (req.user!.role !== 'SUPER_ADMIN' && req.user!.role !== 'ADMIN') {
+      throw new ForbiddenError('Only Admin or Super Admin can mark manual attendance.');
+    }
+
+    const { employeeId, date, checkInTimeStr, checkOutTimeStr } = req.body;
+    const companyId = req.user!.companyId;
+
+    if (!employeeId || !date || !checkInTimeStr) {
+      throw new BadRequestError('Employee, date, and check-in time are required.');
+    }
+
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+
+    const combineDateTime = (baseDate: Date, timeStr: string) => {
+      const [h, m] = timeStr.split(':').map(Number);
+      const d = new Date(baseDate);
+      d.setHours(h, m, 0, 0);
+      return d;
+    };
+
+    const checkInTime = combineDateTime(targetDate, checkInTimeStr);
+    let checkOutTime: Date | null = null;
+    let totalWorkMinutes: number | null = null;
+    let status = 'CHECKED_IN';
+
+    if (checkOutTimeStr) {
+      checkOutTime = combineDateTime(targetDate, checkOutTimeStr);
+      if (checkOutTime < checkInTime) {
+        throw new BadRequestError('Check-out time must be after check-in time.');
+      }
+      totalWorkMinutes = Math.round((checkOutTime.getTime() - checkInTime.getTime()) / 60000);
+      status = 'CHECKED_OUT';
+    }
+
+    const config = await prisma.attendanceConfig.findUnique({ where: { companyId } });
+    let lateBy: number | null = null;
+    let earlyExitBy: number | null = null;
+    let isHalfDay = false;
+
+    if (config) {
+      const officeStart = timeToMinutes(config.officeStartTime);
+      const officeEnd = timeToMinutes(config.officeEndTime);
+      
+      const checkInMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes();
+      if (checkInMinutes > officeStart + config.graceMinutes) {
+        lateBy = checkInMinutes - officeStart;
+      }
+
+      if (checkOutTime) {
+        const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
+        if (checkOutMinutes < officeEnd) {
+          earlyExitBy = officeEnd - checkOutMinutes;
+        }
+
+        if (config.halfDayMinutes > 0 && totalWorkMinutes !== null) {
+          isHalfDay = totalWorkMinutes < config.halfDayMinutes;
+        }
+      }
+    }
+
+    const existing = await prisma.attendanceRecord.findUnique({
+      where: { employeeId_date: { employeeId, date: targetDate } },
+    });
+
+    let record;
+    if (existing) {
+      record = await prisma.attendanceRecord.update({
+        where: { id: existing.id },
+        data: {
+          checkInTime,
+          checkOutTime,
+          totalWorkMinutes,
+          lateBy,
+          earlyExitBy,
+          isHalfDay,
+          status,
+          isWithinGeofence: true,
+        },
+      });
+    } else {
+      record = await prisma.attendanceRecord.create({
+        data: {
+          companyId,
+          employeeId,
+          date: targetDate,
+          checkInTime,
+          checkOutTime,
+          totalWorkMinutes,
+          lateBy,
+          earlyExitBy,
+          isHalfDay,
+          status,
+          isWithinGeofence: true,
+        },
+      });
+    }
+
+    res.status(existing ? 200 : 201).json({
+      status: 'success',
+      message: existing ? 'Attendance record updated successfully.' : 'Manual attendance created successfully.',
+      data: record,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+

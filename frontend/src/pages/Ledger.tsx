@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { api } from '../services/api';
 import { RefreshCw, Filter, ShieldAlert, Ban, X, AlertCircle } from 'lucide-react';
 
@@ -73,6 +74,10 @@ export const Ledger: React.FC = () => {
   useEffect(() => {
     fetchTransactions();
   }, [page, typeFilter, categoryFilter, accountFilter]);
+
+  // Auto-refresh transactions every 30s
+  useAutoRefresh(fetchTransactions, 30000, [page, typeFilter, categoryFilter, accountFilter]);
+
 
   useEffect(() => {
     api.get('/payment-categories').then(res => setCategoriesList(res.data.data || [])).catch(console.error);

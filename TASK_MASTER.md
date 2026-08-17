@@ -269,6 +269,32 @@
 - [x] Build Admin settings configuration panel `AttendanceConfig.tsx` to set timings, grace periods, selfie rules, and geofence locations (including automated browser GPS-location lookup)
 - [x] Register new routes in `App.tsx` and add "Attendance" and "Attendance Settings" modules to `Sidebar.tsx`
 - [x] Verify frontend and backend compiler compatibility checks (100% pass)
+- [x] Add half-day timing configuration parameters, checkout validations, and logs badges on personal and admin tables
+- [x] Enforce allowed break time slots window validation restricting start-break triggers to range
+- [x] Restrict access to Attendance Settings menu and Attendance Dashboard strictly to Super Admin context, blocking standard Admin role users
+- [x] Make top KPI cards (Present, Late, Absent, Total) in the Attendance Dashboard fully interactive filter buttons with hover effects and glowing active borders
+- [x] Implement backend virtual record generation for absent employees to display them in the daily attendance registry list
+- [x] Support safe rendering of virtual records, showing customized absent status badges and hiding verifications/timestamps
+- [x] Add dynamic "Single Date" vs "Date Range" filter toggle buttons with From/To inputs in the Admin header, enabling monthly and custom date range attendance logs reporting with record-date labels.
+- [x] Add client-side "Export CSV" functionality to download filtered logs (Single Date or Date Range queries) as an Excel-compatible CSV file instantly, with status column modifiers appending "(Half Day)" for affected records.
+- [x] Add `allowWFH` boolean column to the `Employee` model and enforce backend geofencing blocks during check-in for non-WFH employees.
+- [x] Build the "WFH Settings" tab in `AttendanceManagement.tsx` to list all employees and allow Super Admin to toggle WFH permissions in 1 click, with corresponding frontend check-in button bypass checks and geofence indicators updated dynamically.
+- [x] Remove strict time-of-day window checks from backend break triggers to allow flexible tea/coffee breaks during the work shift.
+- [x] Add "+ Manual Attendance" overlay forms modal on the Admin dashboard allowing Super Admins to manually insert or correct check-in/out records for any employee, resolving subsequent camera overlay tag parsing errors.
+- [x] Allow standard `ADMIN` users to access and edit WFH Settings tabs and manual attendance modals, while keeping global Attendance Settings configs restricted to Super Admins.
+- [x] Implement midnight auto-checkout cron job (`node-cron`) that runs at 00:01 AM daily: finds all `CHECKED_IN`/`ON_BREAK` records from previous day, closes open breaks, and auto-checks out employees at the office end time with full work/break/half-day calculations.
+
+---
+
+### ✅ Phase 20: Salaries, Attendance & Leaves Integration `[COMPLETE]`
+- [x] Add `lwpDays`, `absentDays`, `halfDays`, and `unpaidDeductions` tracking columns to the `PayrollItem` model in `schema.prisma`
+- [x] Synchronize updated Prisma client and database via `npx prisma db push`
+- [x] Update `generatePayroll` backend controller in `salary.controller.ts` to execute day-by-day loop analysis evaluating Sundays, company holidays, approved Leaves (Paid vs LWP), check-in status (Present vs Half-Day), and Absences
+- [x] Automate Loss of Pay (LOP) calculations using dynamic daily salary rates (`LOP = LWP + Absent + 0.5 * HalfDay`) and deduct from Net Salary
+- [x] Update frontend `PayrollList.tsx` slips grid layout to display LLOP days counts and deductions on admin view
+- [x] Update frontend `EmployeePortal.tsx` interactive payslip template and print renderer to display transparent LOP breakdowns
+- [x] Verify frontend and backend TypeScript compilation check (`npx tsc --noEmit`) with 0 errors
+
 
 
 
