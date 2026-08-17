@@ -5,8 +5,8 @@ import axios from 'axios';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('superadmin@acme.com');
-  const [password, setPassword] = useState('Password@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -151,19 +151,6 @@ export const Login: React.FC = () => {
               )}
             </button>
           </form>
-
-          {/* Quick Help box */}
-          <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/5 max-h-48 overflow-y-auto">
-            <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">
-              Seeded Development Accounts (Password: Password@123)
-            </h4>
-            <div className="text-[11px] text-gray-400 space-y-1 font-mono">
-              <p><span className="text-indigo-300">Super Admin:</span> superadmin@acme.com</p>
-              <p><span className="text-indigo-300">Admin:</span> admin@acme.com</p>
-              <p><span className="text-indigo-300">Accounts:</span> accounts@acme.com</p>
-              <p><span className="text-indigo-300">Staff:</span> staff@acme.com</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

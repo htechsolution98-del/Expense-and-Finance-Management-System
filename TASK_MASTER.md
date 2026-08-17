@@ -293,6 +293,10 @@
 - [x] Automate Loss of Pay (LOP) calculations using dynamic daily salary rates (`LOP = LWP + Absent + 0.5 * HalfDay`) and deduct from Net Salary
 - [x] Update frontend `PayrollList.tsx` slips grid layout to display LLOP days counts and deductions on admin view
 - [x] Update frontend `EmployeePortal.tsx` interactive payslip template and print renderer to display transparent LOP breakdowns
+- [x] Implement daily auto-checkout cron job (`node-cron`) for unclosed shifts at end of day
+- [x] Build Change Password modal in the global Header layout for all users
+- [x] Implement backend reset-password endpoint and frontend Reset PW modal in Users Directory for Super Admin
+- [x] Implement `useAutoRefresh` hook and add real-time auto-polling to all major pages
 - [x] Verify frontend and backend TypeScript compilation check (`npx tsc --noEmit`) with 0 errors
 
 

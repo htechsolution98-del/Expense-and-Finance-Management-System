@@ -16,7 +16,8 @@ import {
   XCircle,
   HelpCircle,
   Edit2,
-  Trash2
+  Trash2,
+  Key
 } from 'lucide-react';
 
 interface User {
@@ -159,6 +160,15 @@ const permissionCategories = [
       const [extraPermsSelected, setExtraPermsSelected] = useState<string[]>([]);
       const [extraPermsMessage, setExtraPermsMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
+      // Reset Password modal state
+      const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+      const [resetPasswordTargetUser, setResetPasswordTargetUser] = useState<User | null>(null);
+      const [resetNewPassword, setResetNewPassword] = useState('');
+      const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+      const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+      const [resetPasswordError, setResetPasswordError] = useState('');
+      const [resetPasswordSuccess, setResetPasswordSuccess] = useState('');
+
       const hasPermission = (perms: string[]) => {
         if (isSuperAdmin) return true;
         return perms.some((p) => currentUser?.permissions?.includes(p));
@@ -274,6 +284,45 @@ const permissionCategories = [
           setRolePermissions(roleObj.permissions);
         }
       }, [selectedRoleName, roles]);
+
+      const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setResetPasswordError('');
+        setResetPasswordSuccess('');
+
+        if (!resetPasswordTargetUser) return;
+
+        if (resetNewPassword.length < 6) {
+          setResetPasswordError('Password must be at least 6 characters long.');
+          return;
+        }
+
+        if (resetNewPassword !== resetConfirmPassword) {
+          setResetPasswordError('Passwords do not match.');
+          return;
+        }
+
+        setResetPasswordLoading(true);
+        try {
+          const res = await api.post(`/users/${resetPasswordTargetUser.id}/reset-password`, {
+            newPassword: resetNewPassword,
+          });
+
+          if (res.data?.success || res.data?.status === 'success') {
+            setResetPasswordSuccess('Password reset successfully!');
+            setResetNewPassword('');
+            setResetConfirmPassword('');
+            setTimeout(() => {
+              setShowResetPasswordModal(false);
+              setResetPasswordTargetUser(null);
+            }, 2000);
+          }
+        } catch (err: any) {
+          setResetPasswordError(err.response?.data?.message || 'Failed to reset password.');
+        } finally {
+          setResetPasswordLoading(false);
+        }
+      };
 
       const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -736,6 +785,21 @@ const permissionCategories = [
                                           Extra Perms
                                         </button>
                                       )}
+                                      
+                                      <button
+                                        onClick={() => {
+                                          setResetPasswordTargetUser(user);
+                                          setResetPasswordError('');
+                                          setResetPasswordSuccess('');
+                                          setResetNewPassword('');
+                                          setResetConfirmPassword('');
+                                          setShowResetPasswordModal(true);
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/15 text-amber-400 hover:text-amber-300 text-xs font-semibold cursor-pointer transition-all"
+                                        title="Reset this user's password as Super Admin"
+                                      >
+                                        Reset PW
+                                      </button>
                                       <button
                                         onClick={() => handleToggleStatus(user)}
                                         disabled={currentUser && currentUser.id === user.id}
@@ -1455,6 +1519,96 @@ const permissionCategories = [
                     className="px-6 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-650 text-white text-sm font-semibold shadow-lg shadow-indigo-500/20 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
                   >
                     {editRoleSaving ? 'Saving...' : 'Update Role'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Password Modal (Super Admin use case) */}
+        {showResetPasswordModal && resetPasswordTargetUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-[#0a0f18] rounded-2xl border border-white/10 w-full max-w-md shadow-2xl overflow-hidden text-left">
+              <div className="flex items-center justify-between p-5 border-b border-white/5 bg-white/5">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Key className="w-5 h-5 text-amber-400" />
+                  Reset Password: {resetPasswordTargetUser.name || resetPasswordTargetUser.email}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowResetPasswordModal(false);
+                    setResetPasswordTargetUser(null);
+                  }}
+                  className="text-gray-500 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleResetPasswordSubmit} className="p-6 space-y-4">
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-xl text-xs">
+                  Changing password for: <strong className="text-white block mt-0.5">{resetPasswordTargetUser.email}</strong>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={resetNewPassword}
+                    onChange={(e) => setResetNewPassword(e.target.value)}
+                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 text-white text-sm outline-none"
+                    placeholder="Enter new password (min 6 chars)"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={resetConfirmPassword}
+                    onChange={(e) => setResetConfirmPassword(e.target.value)}
+                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 text-white text-sm outline-none"
+                    placeholder="Confirm new password"
+                    required
+                  />
+                </div>
+
+                {resetPasswordError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-medium">
+                    {resetPasswordError}
+                  </div>
+                )}
+
+                {resetPasswordSuccess && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-medium">
+                    {resetPasswordSuccess}
+                  </div>
+                )}
+
+                <div className="pt-4 flex items-center justify-end gap-3 border-t border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowResetPasswordModal(false);
+                      setResetPasswordTargetUser(null);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-white/5 text-gray-400 text-sm hover:text-white transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={resetPasswordLoading}
+                    className="px-6 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-sm font-semibold shadow-lg shadow-amber-500/20 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
+                  >
+                    {resetPasswordLoading ? 'Resetting...' : 'Reset Password'}
                   </button>
                 </div>
               </form>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, Building, Bell } from 'lucide-react';
+import { LogOut, User, Building, Bell, Key, X } from 'lucide-react';
 import { api } from '../services/api';
 
 interface HeaderProps {
@@ -13,6 +13,15 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
   const user = userString ? JSON.parse(userString) : { email: 'admin@company.com', role: 'SUPER_ADMIN' };
 
   const [companyInfo, setCompanyInfo] = useState<{ name: string; currency: string } | null>(null);
+
+  // Password change modal states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [submittingPassword, setSubmittingPassword] = useState(false);
 
   const fetchCompany = async () => {
     try {
@@ -45,6 +54,41 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     navigate('/login');
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+
+    setSubmittingPassword(true);
+    try {
+      const response = await api.post('/auth/change-password', {
+        oldPassword,
+        newPassword,
+      });
+      if (response.data?.success || response.data?.status === 'success') {
+        setPasswordSuccess('Password updated successfully!');
+        setOldPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => setShowPasswordModal(false), 2000);
+      }
+    } catch (err: any) {
+      setPasswordError(err.response?.data?.message || 'Failed to update password.');
+    } finally {
+      setSubmittingPassword(false);
+    }
   };
 
   return (
@@ -92,6 +136,18 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
           </div>
 
           <button
+            onClick={() => {
+              setPasswordError('');
+              setPasswordSuccess('');
+              setShowPasswordModal(true);
+            }}
+            title="Change Password"
+            className="p-2 text-slate-400 hover:text-[var(--primary)] rounded-lg hover:bg-slate-50 transition-colors cursor-pointer ml-2"
+          >
+            <Key className="w-5 h-5" />
+          </button>
+
+          <button
             onClick={handleLogout}
             title="Log Out"
             className="p-2 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer ml-2"
@@ -100,6 +156,92 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
           </button>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative text-left">
+            <button 
+              onClick={() => setShowPasswordModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+              <Key className="w-5 h-5 text-emerald-400" />
+              Change Password
+            </h3>
+            <p className="text-xs text-gray-400 mb-6">
+              Update your account password. Make sure it's secure.
+            </p>
+
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2">
+                  Current Password
+                </label>
+                <input 
+                  type="password"
+                  required
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[var(--primary)] transition-colors"
+                  placeholder="Enter current password"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2">
+                  New Password
+                </label>
+                <input 
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[var(--primary)] transition-colors"
+                  placeholder="Enter new password (min. 6 chars)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2">
+                  Confirm New Password
+                </label>
+                <input 
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[var(--primary)] transition-colors"
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              {passwordError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-medium">
+                  {passwordError}
+                </div>
+              )}
+
+              {passwordSuccess && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-medium">
+                  {passwordSuccess}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={submittingPassword}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl py-3 font-bold transition-colors cursor-pointer mt-2 shadow-md shadow-emerald-600/10"
+              >
+                {submittingPassword ? 'Updating...' : 'Update Password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

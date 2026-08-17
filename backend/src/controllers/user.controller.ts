@@ -985,3 +985,53 @@ export const setUserExtraPermissions = async (
     next(err);
   }
 };
+
+const resetPasswordSchema = z.object({
+  newPassword: z.string().min(6, 'Password must be at least 6 characters long'),
+});
+
+export const resetUserPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = resetPasswordSchema.parse(req.body);
+    const companyId = req.companyId!;
+
+    // Restrict this to Super Admin only
+    if (req.user!.role !== 'SUPER_ADMIN' && !req.user!.permissions.includes('*')) {
+      throw new ForbiddenError('Only Super Admin can reset user passwords');
+    }
+
+    const user = await getTenantScopedUser(id, companyId);
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 12);
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        passwordHash: newPasswordHash,
+      },
+    });
+
+    // Write audit log
+    await prisma.auditLog.create({
+      data: {
+        companyId,
+        userId: req.user!.id,
+        module: 'USER',
+        recordId: id,
+        action: 'PASSWORD_RESET',
+        ipAddress: req.ip || '127.0.0.1',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        newData: JSON.stringify({ resetTargetEmail: user.email }),
+      },
+    });
+
+    sendSuccess(res, 'User password reset successfully');
+  } catch (err) {
+    next(err);
+  }
+};

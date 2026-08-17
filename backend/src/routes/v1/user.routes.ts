@@ -15,6 +15,7 @@ import {
   deleteUser,
   getUserExtraPermissions,
   setUserExtraPermissions,
+  resetUserPassword,
 } from '../../controllers/user.controller';
 import { authenticate } from '../../middleware/auth.middleware';
 import { authorize } from '../../middleware/permission.middleware';
@@ -37,6 +38,7 @@ router.post('/', authorize('USER_CREATE'), createUser);
 router.patch('/:id', authorize('USER_UPDATE'), updateUser);
 router.patch('/:id/status', authorize('USER_DISABLE'), updateStatus);
 router.patch('/:id/roles', authorize('ROLE_UPDATE'), updateRoles);
+router.post('/:id/reset-password', authorize('USER_UPDATE'), resetUserPassword);
 router.put('/roles/:id/permissions', authorize('ROLE_UPDATE'), updateRolePermissions);
 router.delete('/:id', authorize('USER_DISABLE'), deleteUser);
 

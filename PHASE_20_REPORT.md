@@ -31,6 +31,13 @@ Phase 20 establishes a direct dynamic integration between the **Attendance track
 *   Adds a dedicated **Loss of Pay (LOP)** item row in the Deductions section of both the interactive Payslip details view and the printable slips (`@media print` CSS layout).
 *   Displays the breakdown details clearly (e.g., `(LWP: 1d | Absent: 2d | Half: 1d)`) to ensure absolute transparent computations for employees.
 
+### 5. Universal Password Change & Reset Engine
+*   **Self-Service Password Updates (`Header.tsx`):** Added a Key icon in the global header action bar, opening a modal that allows any logged-in user (Admin, Accounts, Staff, etc.) to change their password securely via JWT validation.
+*   **Super Admin User Password Overrides (`Users.tsx`):** Added a "Reset PW" action button for Super Admins in the User Directory table row, opening a modal to reset password on demand.
+*   **Backend Reset Password Route (`user.controller.ts` & `user.routes.ts`):** Implemented `POST /api/v1/users/:id/reset-password` validated by `authorize('USER_UPDATE')` and restricted internally to Super Admins.
+*   **Auto-Checkout Cron Job (`autoCheckout.job.ts`):** Scheduled a daily cron job running at 00:01 AM using `node-cron` that auto checks out previous day's active/open check-ins/breaks at the configured office end time, recording it via `checkOutNote`.
+*   **Real-time Polling Hook (`useAutoRefresh.ts`):** Implemented a lightweight hook running background silent data synchronization every 30s across all primary UI dashboard pages (Expenses, Payments, Ledger, Attendance, Leaves, Users, Payroll) without full-page reloads/flicker.
+
 ---
 
 ## 🧪 Verification & Build Status
