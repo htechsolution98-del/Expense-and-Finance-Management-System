@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { prisma } from '../config/database';
 import { sendSuccess } from '../utils/apiResponse';
-import { BadRequestError } from '../utils/errors';
+import { BadRequestError, NotFoundError } from '../utils/errors';
 
 const createClientSchema = z.object({
   name: z.string().min(2),
@@ -299,6 +299,49 @@ export const createLoan = async (
     });
 
     sendSuccess(res, 'Loan registered and principal deposited successfully', result, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateLoanStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const companyId = req.companyId!;
+    const { id } = req.params;
+    const { status } = z.object({ status: z.enum(['ACTIVE', 'SETTLED']) }).parse(req.body);
+
+    const loan = await prisma.loan.findFirst({
+      where: { id, companyId }
+    });
+
+    if (!loan) {
+      throw new NotFoundError('Loan not found');
+    }
+
+    const updated = await prisma.loan.update({
+      where: { id },
+      data: { status }
+    });
+
+    // Write audit log
+    await prisma.auditLog.create({
+      data: {
+        companyId,
+        userId: req.user!.id,
+        module: 'LOAN',
+        recordId: id,
+        action: 'LOAN_STATUS_UPDATE',
+        ipAddress: req.ip || '127.0.0.1',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        newData: JSON.stringify({ status }),
+      },
+    });
+
+    sendSuccess(res, 'Loan status updated successfully', updated);
   } catch (err) {
     next(err);
   }

@@ -6,7 +6,7 @@ import { BadRequestError, NotFoundError, ForbiddenError } from '../utils/errors'
 
 const paymentInSchema = z.object({
   accountId: z.string(),
-  amount: z.number().positive(),
+  amount: z.coerce.number().positive(),
   category: z.string(),
   purpose: z.string().min(3),
   paymentMode: z.enum([
@@ -140,6 +140,7 @@ export const createPaymentIn = async (
           companyId,
           voucherNo,
           transactionId: trx.id,
+          filePath: req.file ? `uploads/${req.file.filename}` : null,
         },
       });
 

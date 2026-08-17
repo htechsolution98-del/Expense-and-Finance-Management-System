@@ -38,6 +38,8 @@ export const DashboardLayout: React.FC = () => {
         return 'Employees Directory';
       case '/ledger':
         return 'Unified Ledger Transactions';
+      case '/loans':
+        return 'Business Loans & Udhaar Ledger';
       default:
         return 'Finance Management Portal';
     }

@@ -23,7 +23,9 @@ export function useAutoRefresh(
   });
 
   useEffect(() => {
-    // Poll every intervalMs (initial load handled by page's own useEffect)
+    // Call immediately on mount/dependency change
+    callbackRef.current();
+
     const id = setInterval(() => {
       callbackRef.current();
     }, intervalMs);

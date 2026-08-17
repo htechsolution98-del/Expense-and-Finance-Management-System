@@ -37,6 +37,13 @@ Phase 20 establishes a direct dynamic integration between the **Attendance track
 *   **Backend Reset Password Route (`user.controller.ts` & `user.routes.ts`):** Implemented `POST /api/v1/users/:id/reset-password` validated by `authorize('USER_UPDATE')` and restricted internally to Super Admins.
 *   **Auto-Checkout Cron Job (`autoCheckout.job.ts`):** Scheduled a daily cron job running at 00:01 AM using `node-cron` that auto checks out previous day's active/open check-ins/breaks at the configured office end time, recording it via `checkOutNote`.
 *   **Real-time Polling Hook (`useAutoRefresh.ts`):** Implemented a lightweight hook running background silent data synchronization every 30s across all primary UI dashboard pages (Expenses, Payments, Ledger, Attendance, Leaves, Users, Payroll) without full-page reloads/flicker.
+*   **Business Loans & Udhaar Ledger (`Loans.tsx`):** Implemented a complete dashboard interface for company borrowings featuring:
+    *   **Financial Metrics:** Total Borrowed, Total Repaid, Total Outstanding, and Total Utilized.
+    *   **Register Borrowing Form:** Deposit principal amount directly to any company bank/cash account while registering lender profiles.
+    *   **Action Drawer:** Quick modals to record repayments (`LOAN_REPAYMENT`) and track fund utilizations (`LOAN_UTILIZATION`).
+    *   **Detailed History Logs:** Sub-ledgers displaying all principal deposits, repayments, and utilizations associated with the specific loan.
+    *   **Settle Option:** Toggle status between `ACTIVE` and `SETTLED` for closed borrowings.
+*   **UPI Screenshot & Cheque Uploads (`Payments.tsx`):** Restored the capability to upload payment receipts and screenshots for UPI transactions on the `Record Financial Transaction` screen. Form submission now correctly utilizes `FormData` to deliver the multipart file to the backend, enabling deposit/payout voucher attachment storage.
 
 ---
 

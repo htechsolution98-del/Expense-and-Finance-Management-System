@@ -30,6 +30,7 @@ export const Payments: React.FC = () => {
   const [purpose, setPurpose] = useState('');
   const [paymentMode, setPaymentMode] = useState('BANK_TRANSFER');
   const [referenceNo, setReferenceNo] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Target Parties select
   const [partyType, setPartyType] = useState<'NONE' | 'CLIENT' | 'VENDOR' | 'EMPLOYEE' | 'LOAN'>('NONE');
@@ -70,6 +71,7 @@ export const Payments: React.FC = () => {
     setSelectedPartyId('');
     setCategory('');
     setPartyType('NONE');
+    setSelectedFile(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,36 +80,30 @@ export const Payments: React.FC = () => {
     setErrorMsg('');
     setSubmitLoading(true);
 
+    const buildFormData = () => {
+      const formData = new FormData();
+      formData.append('accountId', accountId);
+      formData.append('amount', amount);
+      formData.append('category', category || 'OTHER');
+      formData.append('purpose', purpose);
+      formData.append('paymentMode', paymentMode);
+      if (referenceNo) formData.append('referenceNo', referenceNo);
+      if (partyType === 'CLIENT' && selectedPartyId) formData.append('clientId', selectedPartyId);
+      if (partyType === 'VENDOR' && selectedPartyId) formData.append('vendorId', selectedPartyId);
+      if (partyType === 'EMPLOYEE' && selectedPartyId) formData.append('employeeId', selectedPartyId);
+      if (partyType === 'LOAN' && selectedPartyId) formData.append('loanId', selectedPartyId);
+      if (selectedFile) {
+        formData.append('bill', selectedFile);
+      }
+      return formData;
+    };
+
     try {
       if (activeTab === 'in') {
-        const payload = {
-          accountId,
-          amount: parseFloat(amount),
-          category: category || 'OTHER',
-          purpose,
-          paymentMode,
-          referenceNo: referenceNo || undefined,
-          clientId: partyType === 'CLIENT' ? selectedPartyId : undefined,
-          vendorId: partyType === 'VENDOR' ? selectedPartyId : undefined,
-          employeeId: partyType === 'EMPLOYEE' ? selectedPartyId : undefined,
-          loanId: partyType === 'LOAN' ? selectedPartyId : undefined,
-        };
-        await api.post('/payments/in', payload);
+        await api.post('/payments/in', buildFormData());
         setSuccessMsg('Incoming payment successfully logged and ledger updated.');
       } else if (activeTab === 'out') {
-        const payload = {
-          accountId,
-          amount: parseFloat(amount),
-          category: category || 'OTHER',
-          purpose,
-          paymentMode,
-          referenceNo: referenceNo || undefined,
-          clientId: partyType === 'CLIENT' ? selectedPartyId : undefined,
-          vendorId: partyType === 'VENDOR' ? selectedPartyId : undefined,
-          employeeId: partyType === 'EMPLOYEE' ? selectedPartyId : undefined,
-          loanId: partyType === 'LOAN' ? selectedPartyId : undefined,
-        };
-        await api.post('/payments/out', payload);
+        await api.post('/payments/out', buildFormData());
         setSuccessMsg('Outgoing payment successfully logged and ledger updated.');
       } else {
         await api.post('/transfers', {
@@ -363,15 +359,16 @@ export const Payments: React.FC = () => {
                 </div>
               )}
 
-              {/* Cheque Upload Box */}
-              {paymentMode === 'CHEQUE' && (
+              {/* Upload Box for UPI or Cheque */}
+              {(paymentMode === 'CHEQUE' || paymentMode === 'UPI') && (
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
-                    Upload Cheque Image
+                    {paymentMode === 'CHEQUE' ? 'Upload Cheque Image' : 'Upload Transaction Screenshot'}
                   </label>
                   <input
                     type="file"
                     accept="image/*,.pdf"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                     className="block w-full px-4 py-[7px] rounded-xl bg-[#0e1420]/80 border border-white/5 text-white text-sm outline-none file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30 cursor-pointer"
                   />
                 </div>

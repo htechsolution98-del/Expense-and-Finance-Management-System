@@ -21,6 +21,7 @@ import { CompanySettings } from './pages/CompanySettings';
 import LeaveManagement from './pages/LeaveManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
 import AttendanceConfig from './pages/AttendanceConfig';
+import { Loans } from './pages/Loans';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { DashboardLayout } from './layouts/DashboardLayout';
 
@@ -59,6 +60,10 @@ const App: React.FC = () => {
             
             <Route element={<ProtectedRoute requiredPermission={['PAYMENT_VIEW', 'PAYMENT_CREATE', 'PAYMENT_APPROVE']} />}>
               <Route path="/payments" element={<Payments />} />
+            </Route>
+
+            <Route element={<ProtectedRoute requiredPermission="LOAN_VIEW" />}>
+              <Route path="/loans" element={<Loans />} />
             </Route>
             
             <Route element={<ProtectedRoute requiredPermission="SUPER_ADMIN_ONLY" />}>

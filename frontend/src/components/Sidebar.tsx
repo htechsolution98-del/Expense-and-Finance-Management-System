@@ -122,6 +122,13 @@ export const Sidebar: React.FC = () => {
       visible: user.role === 'SUPER_ADMIN' || user.permissions?.includes('*')
     },
     {
+      name: 'Business Loans',
+      path: '/loans',
+      icon: <Banknote className="w-5 h-5" />,
+      enabled: true,
+      visible: hasPermission(['LOAN_VIEW'])
+    },
+    {
       name: 'Reports & Analytics',
       path: '/reports',
       icon: <LayoutDashboard className="w-5 h-5" />,

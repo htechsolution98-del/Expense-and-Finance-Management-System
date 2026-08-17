@@ -298,6 +298,13 @@
 - [x] Implement backend reset-password endpoint and frontend Reset PW modal in Users Directory for Super Admin
 - [x] Implement `useAutoRefresh` hook and add real-time auto-polling to all major pages
 - [x] Verify frontend and backend TypeScript compilation check (`npx tsc --noEmit`) with 0 errors
+- [x] Implement backend `updateLoanStatus` route and controller logic for settling loans
+- [x] Build frontend `Loans.tsx` management dashboard (KPIs, table lists, create loan modal, action models for repayments/utilizations)
+- [x] Add path mapping for `/loans` inside header titles in `DashboardLayout.tsx`
+- [x] Register `/loans` protected route in `App.tsx` and menu item in `Sidebar.tsx`
+- [x] Restore screenshot upload for UPI and CHEQUE payment modes in Payments.tsx (handling FormData submissions for both deposits and payouts)
+- [x] Enable backend POST /payments/in route to handle file uploads and save filePath to deposit vouchers
+- [x] Fix initial load blank screen bug on Expenses list by updating useAutoRefresh hook to trigger callback immediately on mount/dependency change
 
 
 

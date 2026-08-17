@@ -8,6 +8,7 @@ import {
   createEmployee,
   getLoans,
   createLoan,
+  updateLoanStatus,
 } from '../../controllers/master.controller';
 import { authenticate } from '../../middleware/auth.middleware';
 import { authorize } from '../../middleware/permission.middleware';
@@ -33,5 +34,6 @@ router.post('/employees', authorize('USER_CREATE'), createEmployee);
 // Loans
 router.get('/loans', authorize('LOAN_VIEW'), getLoans);
 router.post('/loans', authorize('LOAN_CREATE'), createLoan);
+router.patch('/loans/:id/status', authorize('LOAN_APPROVE'), updateLoanStatus);
 
 export default router;
