@@ -306,6 +306,22 @@
 - [x] Enable backend POST /payments/in route to handle file uploads and save filePath to deposit vouchers
 - [x] Fix initial load blank screen bug on Expenses list by updating useAutoRefresh hook to trigger callback immediately on mount/dependency change
 
+---
+
+### ✅ Phase 21: UI Color Theme & Layout Overflow/Responsive Fixes `[COMPLETE]`
+- [x] Correct top-level layout wrapper in `DashboardLayout.tsx` (changed `w-screen` to `w-full` and configured responsive main container padding) to prevent viewport page width breakages on scrollbars rendering.
+- [x] Replaced `w-full` with `min-w-full` on all `<table>` elements wrapped inside `overflow-x-auto` scroll containers across all modules (Dashboard, Ledger, Payments, Expenses, Vouchers, Salary/Payroll, Leaves, Attendance, Loans, and User directories) to prevent columns from compressing on narrow screens.
+- [x] Converted hardcoded dark theme CSS values (like backgrounds, white borders, and purple gradients) inside `reports.css` to light-theme CSS variables so reports components match the unified layout.
+- [x] Standardized card grids, state status badges, text colors, select dropdowns, input elements, error containers, and modals across `Accounts.tsx` and `Users.tsx` to align with the light white/slate/green design.
+- [x] Added `truncate` and `min-w-0` to the header title container in `Header.tsx` to prevent long page titles from pushing action menus off the viewport on mobile devices.
+- [x] Compile backend and frontend codebase with 0 static compilation and typechecking errors.
+- [x] Fix sidebar, header, and footer layout behavior in DashboardLayout.tsx (using h-screen overflow-hidden on outer containers and overflow-y-auto on main content outlet) to keep them fixed in place while content scrolls.
+- [x] Redesigned Payments page and Sidebar layout to match the first visual design mockup screenshot.
+- [x] Resolve all hardcoded dark-theme text color leaks (white font on white bg, light grey elements, and transparent borders) inside Tables and Side Drawers (specifically User Directory, Payroll List, and Expenses List) by introducing global overrides in index.css.
+- [x] Optimize all data tables across the system to fit exactly inside the screen width at 100% resolution with no horizontal scrollbar or element overflow. We achieved this by reducing cell padding, font size to 11px, and introducing max-widths and ellipses text truncation.
+- [x] Convert Attendance KPI cards, timeline components, WFH toggle settings, and manual action forms to the unified light theme styling, removing all residual dark-themed backgrounds and borders.
+
+
 
 
 

@@ -129,35 +129,34 @@ export const Payments: React.FC = () => {
     <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
       {/* Header section */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-white">
+        <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
           Record Financial Transaction
         </h1>
-        <p className="text-gray-400 mt-1.5 text-sm">
+        <p className="text-[var(--text-secondary)] mt-1.5 text-sm">
           Log cash/bank deposits, payouts, and transfers with atomic database safeguards.
         </p>
       </div>
 
       {successMsg && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3 text-sm text-emerald-400">
-          <CheckCircle className="w-5 h-5 shrink-0" />
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-sm text-emerald-700">
+          <CheckCircle className="w-5 h-5 shrink-0 text-emerald-600" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-sm text-red-400">
-          <AlertCircle className="w-5 h-5 shrink-0" />
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 text-sm text-red-700">
+          <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex p-1 rounded-xl bg-white/5 border border-white/5 gap-1">
+      <div className="flex p-1 rounded-xl bg-slate-100 border border-slate-200 gap-1">
         <button
           onClick={() => { setActiveTab('in'); resetForm(); setErrorMsg(''); setSuccessMsg(''); }}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-            activeTab === 'in' ? 'bg-indigo-500 text-white shadow-md' : 'text-gray-400 hover:text-white'
-          }`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${activeTab === 'in' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-slate-500 hover:text-slate-900'
+            }`}
         >
           <ArrowDownLeft className="w-4 h-4" />
           <span>Payment In (Deposit)</span>
@@ -165,9 +164,8 @@ export const Payments: React.FC = () => {
 
         <button
           onClick={() => { setActiveTab('out'); resetForm(); setErrorMsg(''); setSuccessMsg(''); }}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-            activeTab === 'out' ? 'bg-indigo-500 text-white shadow-md' : 'text-gray-400 hover:text-white'
-          }`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${activeTab === 'out' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-slate-500 hover:text-slate-900'
+            }`}
         >
           <ArrowUpRight className="w-4 h-4" />
           <span>Payment Out (Payout)</span>
@@ -175,9 +173,8 @@ export const Payments: React.FC = () => {
 
         <button
           onClick={() => { setActiveTab('transfer'); resetForm(); setErrorMsg(''); setSuccessMsg(''); }}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-            activeTab === 'transfer' ? 'bg-indigo-500 text-white shadow-md' : 'text-gray-400 hover:text-white'
-          }`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${activeTab === 'transfer' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-slate-500 hover:text-slate-900'
+            }`}
         >
           <Repeat className="w-4 h-4" />
           <span>Account Transfer</span>
@@ -185,11 +182,11 @@ export const Payments: React.FC = () => {
       </div>
 
       {/* Form Container */}
-      <div className="glass-panel rounded-2xl p-8 bg-card-dark/40 border border-white/5 shadow-xl">
+      <div className="rounded-2xl p-8 bg-white border border-slate-200 shadow-sm">
         {loadingLists ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-            <span className="text-sm text-gray-500">Loading master accounts...</span>
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+            <span className="text-sm text-slate-500">Loading master accounts...</span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -197,13 +194,13 @@ export const Payments: React.FC = () => {
               {/* Account selection for In / Out */}
               {activeTab !== 'transfer' && (
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     Account
                   </label>
                   <select
                     value={accountId}
                     onChange={(e) => setAccountId(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                     required
                   >
                     <option value="">-- Choose Account --</option>
@@ -220,13 +217,13 @@ export const Payments: React.FC = () => {
               {activeTab === 'transfer' && (
                 <>
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                       From Account (Source)
                     </label>
                     <select
                       value={fromAccountId}
                       onChange={(e) => setFromAccountId(e.target.value)}
-                      className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                      className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                       required
                     >
                       <option value="">-- Choose Source --</option>
@@ -239,13 +236,13 @@ export const Payments: React.FC = () => {
                   </div>
 
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                       To Account (Destination)
                     </label>
                     <select
                       value={toAccountId}
                       onChange={(e) => setToAccountId(e.target.value)}
-                      className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                      className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                       required
                     >
                       <option value="">-- Choose Destination --</option>
@@ -261,7 +258,7 @@ export const Payments: React.FC = () => {
 
               {/* Amount */}
               <div className="col-span-2 sm:col-span-1">
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                   Amount (₹)
                 </label>
                 <input
@@ -269,7 +266,7 @@ export const Payments: React.FC = () => {
                   step="0.01"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none font-mono"
+                  className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none font-mono"
                   placeholder="0.00"
                   required
                 />
@@ -278,13 +275,13 @@ export const Payments: React.FC = () => {
               {/* Category for Payment In */}
               {activeTab === 'in' && (
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     Payment Category
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                     required
                   >
                     <option value="">-- Choose Category --</option>
@@ -302,13 +299,13 @@ export const Payments: React.FC = () => {
               {/* Category for Payment Out */}
               {activeTab === 'out' && (
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     Payment Category
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                     required
                   >
                     <option value="">-- Choose Category --</option>
@@ -325,13 +322,13 @@ export const Payments: React.FC = () => {
 
               {/* Payment Mode */}
               <div className="col-span-2 sm:col-span-1">
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                   Payment Mode
                 </label>
                 <select
                   value={paymentMode}
                   onChange={(e) => setPaymentMode(e.target.value)}
-                  className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                  className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                 >
                   <option value="BANK_TRANSFER">Bank NetBanking Transfer</option>
                   <option value="CASH">Physical Cash</option>
@@ -346,14 +343,14 @@ export const Payments: React.FC = () => {
               {/* Reference Number */}
               {paymentMode !== 'CASH' && (
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     {paymentMode === 'CHEQUE' ? 'Cheque Number' : 'Reference / UTR Number'}
                   </label>
                   <input
                     type="text"
                     value={referenceNo}
                     onChange={(e) => setReferenceNo(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                     placeholder={paymentMode === 'CHEQUE' ? "e.g. 123456" : "e.g. UTR1234567890"}
                   />
                 </div>
@@ -362,14 +359,14 @@ export const Payments: React.FC = () => {
               {/* Upload Box for UPI or Cheque */}
               {(paymentMode === 'CHEQUE' || paymentMode === 'UPI') && (
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     {paymentMode === 'CHEQUE' ? 'Upload Cheque Image' : 'Upload Transaction Screenshot'}
                   </label>
                   <input
                     type="file"
                     accept="image/*,.pdf"
                     onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    className="block w-full px-4 py-[7px] rounded-xl bg-[#0e1420]/80 border border-white/5 text-white text-sm outline-none file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30 cursor-pointer"
+                    className="block w-full px-4 py-[7px] rounded-xl bg-white border border-slate-200 text-slate-500 text-sm outline-none file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[var(--primary-light)] file:text-[var(--primary)] hover:file:bg-[var(--primary-light)]/85 cursor-pointer"
                   />
                 </div>
               )}
@@ -378,14 +375,14 @@ export const Payments: React.FC = () => {
 
               {/* Purpose Input */}
               <div className="col-span-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                   Transaction Purpose / Description
                 </label>
                 <input
                   type="text"
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                  className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                   placeholder="e.g. Server hosting renewal invoice #1123"
                   required
                 />
@@ -393,11 +390,11 @@ export const Payments: React.FC = () => {
             </div>
 
             {/* Submit Button */}
-            <div className="pt-4 border-t border-white/5 flex justify-end">
+            <div className="pt-4 border-t border-slate-100 flex justify-end">
               <button
                 type="submit"
                 disabled={submitLoading}
-                className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 font-bold text-white text-sm shadow-lg shadow-indigo-500/20 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-8 py-3 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] font-bold text-white text-sm shadow-lg shadow-[var(--primary)]/15 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
               >
                 {submitLoading ? (
                   <>

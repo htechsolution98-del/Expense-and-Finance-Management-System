@@ -341,7 +341,7 @@ export const Loans: React.FC = () => {
       {/* Loans Table */}
       <div className="glass-panel border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="min-w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/5 bg-[#0e1420]/50 text-gray-400 text-xs font-bold uppercase tracking-wider">
                 <th className="px-6 py-4">Loan/Lender Info</th>

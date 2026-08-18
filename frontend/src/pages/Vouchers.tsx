@@ -332,18 +332,18 @@ export const Vouchers: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
-            <Receipt className="w-8 h-8 text-indigo-400" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)] flex items-center gap-3">
+            <Receipt className="w-8 h-8 text-[var(--primary)]" />
             Voucher System
           </h1>
-          <p className="text-gray-400 mt-1.5 text-sm">
+          <p className="text-[var(--text-secondary)] mt-1.5 text-sm">
             Manage ad-hoc company expenses, vendor payouts, and direct office costs.
           </p>
         </div>
         
         <button
           onClick={() => { resetForm(); setIsModalOpen(true); }}
-          className="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-2 font-medium"
+          className="px-5 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-xl shadow-lg shadow-[var(--primary)]/15 transition-all flex items-center gap-2 font-medium"
         >
           <Plus className="w-5 h-5" />
           Create Voucher
@@ -353,22 +353,22 @@ export const Vouchers: React.FC = () => {
       {/* Tools */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             type="text"
             placeholder="Search by voucher no, purpose, or category..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 rounded-xl bg-card-dark/40 border border-white/5 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-white placeholder-gray-500 outline-none transition-all"
+            className="w-full pl-11 pr-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]/20 text-slate-900 placeholder-slate-400 outline-none transition-all"
           />
         </div>
       </div>
 
       {/* List */}
-      <div className="glass-panel rounded-2xl overflow-hidden border border-white/5 shadow-xl bg-card-dark/30">
+      <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-white/5 text-gray-400">
+          <table className="min-w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-slate-50 text-[var(--text-secondary)] border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4 font-semibold">Voucher No</th>
                 <th className="px-6 py-4 font-semibold">Date</th>
@@ -379,59 +379,59 @@ export const Vouchers: React.FC = () => {
                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-indigo-500" />
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-[var(--primary)]" />
                     Loading vouchers...
                   </td>
                 </tr>
               ) : filteredVouchers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                     <Receipt className="w-12 h-12 mx-auto mb-3 opacity-20" />
                     No vouchers found. Click "Create Voucher" to log one.
                   </td>
                 </tr>
               ) : (
                 filteredVouchers.map((v) => (
-                  <tr key={v.id} className="hover:bg-white/5 transition-colors group cursor-pointer">
+                  <tr key={v.id} className="hover:bg-slate-50 transition-colors group cursor-pointer">
                     <td className="px-6 py-4">
-                      <span className="font-mono text-indigo-300 font-medium">
+                      <span className="font-mono text-[var(--primary)] font-medium">
                         {v.voucherNo || v.transactionNo}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-300">
+                    <td className="px-6 py-4 text-[var(--text-secondary)]">
                       {new Date(v.date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2.5 py-1 bg-white/10 text-gray-300 rounded text-xs font-medium border border-white/5">
+                      <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium border border-slate-200">
                         {v.category?.replace(/_/g, ' ') || 'OTHER'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-gray-200 truncate max-w-xs" title={v.purpose}>{v.purpose}</p>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Paid via {v.paymentMode?.replace(/_/g, ' ') || 'CASH'} from {v.accountName}</p>
+                      <p className="text-[var(--text-primary)] truncate max-w-xs" title={v.purpose}>{v.purpose}</p>
+                      <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">Paid via {v.paymentMode?.replace(/_/g, ' ') || 'CASH'} from {v.accountName}</p>
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-white">
+                    <td className="px-6 py-4 text-right font-bold text-[var(--text-primary)]">
                       ₹{v.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                       <td className="px-6 py-4 text-center">
                         {v.status === 'COMPLETED' && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <CheckCircle className="w-3.5 h-3.5" />
                             Completed
                           </span>
                         )}
                         {v.status === 'PENDING_APPROVAL' && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
                             <Clock className="w-3.5 h-3.5" />
                             Pending Admin
                           </span>
                         )}
                         {v.status === 'APPROVED' && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
                             <CheckCircle className="w-3.5 h-3.5" />
                             Approved
                           </span>
@@ -442,7 +442,7 @@ export const Vouchers: React.FC = () => {
                           {v.status === 'PENDING_APPROVAL' && (currentUserRole === 'ADMIN' || currentUserRole === 'SUPER_ADMIN') && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleApprove(v.id); }}
-                              className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 rounded text-xs font-medium transition"
+                              className="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-xs font-medium border border-emerald-200 transition"
                             >
                               Approve
                             </button>
@@ -450,7 +450,7 @@ export const Vouchers: React.FC = () => {
                           {v.status === 'APPROVED' && (currentUserRole === 'ACCOUNTS' || currentUserRole === 'ACCOUNT_I' || currentUserRole === 'ACCOUNT_II') && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDisburse(v.id); }}
-                              className="px-3 py-1.5 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 rounded text-xs font-medium transition"
+                              className="px-3 py-1.5 bg-[var(--primary-light)] text-[var(--primary)] hover:bg-[var(--primary-light)]/80 rounded text-xs font-medium transition"
                             >
                               Disburse
                             </button>
@@ -470,8 +470,8 @@ export const Vouchers: React.FC = () => {
                               title={v.filePath ? "View Attached Bill" : "No Bill Attached"}
                               className={`p-1.5 rounded transition ${
                                 v.filePath 
-                                  ? 'text-gray-400 hover:text-blue-400 hover:bg-blue-500/10' 
-                                  : 'text-gray-600 cursor-not-allowed opacity-50'
+                                  ? 'text-slate-400 hover:text-blue-600 hover:bg-blue-50' 
+                                  : 'text-slate-300 cursor-not-allowed opacity-50'
                               }`}
                             >
                               <Eye className="w-4 h-4" />
@@ -481,7 +481,7 @@ export const Vouchers: React.FC = () => {
                             <button 
                               onClick={(e) => { e.stopPropagation(); handlePrint(v); }}
                               title="Print Voucher"
-                              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition"
+                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition"
                             >
                               <Printer className="w-4 h-4" />
                             </button>
@@ -490,7 +490,7 @@ export const Vouchers: React.FC = () => {
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleDelete(v.id); }}
                               title="Delete (Reverse) Voucher"
-                              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition"
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -508,15 +508,15 @@ export const Vouchers: React.FC = () => {
         {/* Create Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-[#121826] border border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-up flex flex-col max-h-[90vh]">
-              <div className="flex justify-between items-center p-6 border-b border-white/10 bg-white/5">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Receipt className="w-5 h-5 text-indigo-400" />
+            <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-up flex flex-col max-h-[90vh]">
+              <div className="flex justify-between items-center p-6 border-b border-slate-100">
+                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Receipt className="w-5 h-5 text-[var(--primary)]" />
                   Record New Voucher
                 </h2>
                 <button 
                   onClick={() => setIsModalOpen(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -525,30 +525,30 @@ export const Vouchers: React.FC = () => {
               <div className="p-6 overflow-y-auto">
                 {successMsg ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center animate-zoom-in">
-                  <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4 border border-emerald-500/30">
-                    <CheckCircle className="w-8 h-8 text-emerald-400" />
+                  <div className="w-16 h-16 bg-[var(--primary-light)] rounded-full flex items-center justify-center mb-4 border border-emerald-200">
+                    <CheckCircle className="w-8 h-8 text-[var(--primary)]" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Voucher Generated</h3>
-                  <p className="text-emerald-400">{successMsg}</p>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">Voucher Generated</h3>
+                  <p className="text-[var(--primary)]">{successMsg}</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {errorMsg && (
-                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-sm text-red-400 animate-shake">
-                      <AlertCircle className="w-5 h-5 shrink-0" />
+                    <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 text-sm text-red-700 animate-shake">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
                       <span>{errorMsg}</span>
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                         Source Account
                       </label>
                       <select
                         value={accountId}
                         onChange={(e) => setAccountId(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white outline-none"
+                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 outline-none"
                         required
                       >
                         <option value="">-- Choose Account --</option>
@@ -561,7 +561,7 @@ export const Vouchers: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                         Amount (₹)
                       </label>
                       <input
@@ -570,7 +570,7 @@ export const Vouchers: React.FC = () => {
                         step="0.01"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white outline-none"
+                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 outline-none"
                         placeholder="e.g. 5000"
                         required
                       />
@@ -579,27 +579,27 @@ export const Vouchers: React.FC = () => {
 
 
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                         Payment Mode
                       </label>
                       <select
                         value={paymentMode}
                         onChange={(e) => setPaymentMode(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white outline-none"
+                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 outline-none"
                       >
                         <option value="CASH">Cash</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                         Reference No. (Optional)
                       </label>
                       <input
                         type="text"
                         value={referenceNo}
                         onChange={(e) => setReferenceNo(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white outline-none"
+                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 outline-none"
                         placeholder="Cheque / UPI / UTR No."
                       />
                     </div>
@@ -607,27 +607,27 @@ export const Vouchers: React.FC = () => {
                     <div className="sm:col-span-2">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                             Payee Name
                           </label>
                           <input
                             type="text"
                             value={payeeName}
                             onChange={(e) => setPayeeName(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white outline-none"
+                            className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 outline-none"
                             placeholder="e.g. John Doe / Vendor Name"
                             required
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                             Purpose / Description
                           </label>
                           <input
                             type="text"
                             value={purpose}
                             onChange={(e) => setPurpose(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white outline-none"
+                            className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 outline-none"
                             placeholder="e.g. Computer repair charge by engineering team"
                             required
                           />
@@ -636,32 +636,32 @@ export const Vouchers: React.FC = () => {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                         Attach Bill / Receipt (Optional)
                       </label>
                       <div className="relative group">
                         <input
                           type="file"
                           onChange={(e) => setBillFile(e.target.files?.[0] || null)}
-                          className="w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white outline-none file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 transition-all"
+                          className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] text-slate-500 outline-none file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[var(--primary-light)] file:text-[var(--primary)] hover:file:bg-[var(--primary-light)]/85 transition-all"
                           accept="image/*,.pdf"
                         />
                       </div>
                     </div>
                   </div>
                   
-                  <div className="pt-4 border-t border-white/10 flex justify-end gap-3">
+                  <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
                     <button
                       type="button"
                       onClick={() => setIsModalOpen(false)}
-                      className="px-5 py-2.5 rounded-xl font-medium text-gray-400 hover:text-white hover:bg-white/5 transition"
+                      className="px-5 py-2.5 rounded-xl font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={submitLoading}
-                      className="px-6 py-2.5 rounded-xl font-medium bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg hover:shadow-indigo-500/25 transition disabled:opacity-50 flex items-center gap-2"
+                      className="px-6 py-2.5 rounded-xl font-medium bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white shadow-lg shadow-[var(--primary)]/15 transition disabled:opacity-50 flex items-center gap-2"
                     >
                       {submitLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                       Generate Voucher
@@ -677,20 +677,20 @@ export const Vouchers: React.FC = () => {
       {/* View Bill Modal */}
       {viewBillUrl && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setViewBillUrl(null)}>
-          <div className="bg-[#0e1420] rounded-2xl w-full max-w-4xl max-h-[90vh] shadow-2xl border border-white/10 flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <Receipt className="w-5 h-5 text-indigo-400" />
-                <h2 className="text-lg font-bold text-white">Attached Bill / Receipt</h2>
+                <Receipt className="w-5 h-5 text-[var(--primary)]" />
+                <h2 className="text-lg font-bold text-slate-900">Attached Bill / Receipt</h2>
               </div>
               <button 
                 onClick={() => setViewBillUrl(null)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-4 flex-1 bg-black/20 flex items-center justify-center overflow-auto min-h-[500px]">
+            <div className="p-4 flex-1 bg-slate-50 flex items-center justify-center overflow-auto min-h-[500px]">
               {viewBillUrl.toLowerCase().endsWith('.pdf') ? (
                 <iframe 
                   src={viewBillUrl} 

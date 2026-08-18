@@ -135,13 +135,13 @@ export const Dashboard: React.FC = () => {
         {/* Staff KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div
-            className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm cursor-pointer hover:shadow-md hover:border-emerald-200 transition-all"
+            className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm cursor-pointer hover:shadow-md hover:border-[var(--primary)] transition-all"
             onClick={() => navigate('/expenses')}
             title="View all expense claims"
           >
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm text-[var(--text-secondary)] font-semibold">Total Claims Filed</span>
-              <div className="p-2 rounded-xl bg-emerald-50 text-[var(--primary)]">
+              <div className="p-2 rounded-xl bg-[var(--primary-light)] text-[var(--primary)]">
                 <FileText className="w-5 h-5" />
               </div>
             </div>
@@ -150,13 +150,13 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div
-            className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm cursor-pointer hover:shadow-md hover:border-amber-200 transition-all"
+            className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm cursor-pointer hover:shadow-md hover:border-[var(--warning)] transition-all"
             onClick={() => navigate('/expenses')}
             title="View pending approvals"
           >
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm text-[var(--text-secondary)] font-semibold">Pending Approvals</span>
-              <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
+              <div className="p-2 rounded-xl bg-[#FFF7ED] text-[#EA580C]">
                 <Clock className="w-5 h-5" />
               </div>
             </div>
@@ -165,13 +165,13 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div
-            className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm cursor-pointer hover:shadow-md hover:border-blue-200 transition-all"
+            className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm cursor-pointer hover:shadow-md hover:border-[var(--success)] transition-all"
             onClick={() => navigate('/expenses')}
             title="View reimbursed claims"
           >
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm text-[var(--text-secondary)] font-semibold">Total Reimbursed</span>
-              <div className="p-2 rounded-xl bg-blue-50 text-[var(--primary)]">
+              <div className="p-2 rounded-xl bg-[#ECFDF5] text-[#16A34A]">
                 <CheckCircle className="w-5 h-5" />
               </div>
             </div>
@@ -196,7 +196,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-xs text-[var(--text-secondary)] uppercase">
                   <th className="pb-3">Expense Code</th>
@@ -295,13 +295,13 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Card 1: Total Balance */}
         <div
-          className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer"
+          className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm hover:shadow-md hover:border-[var(--primary)] transition-all cursor-pointer"
           onClick={() => navigate('/accounts')}
           title="View Bank & Cash Accounts"
         >
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm text-[var(--text-secondary)] font-semibold">Net Company Liquidity</span>
-            <div className="p-2 rounded-xl bg-emerald-50 text-[var(--primary)]">
+            <div className="p-2 rounded-xl bg-[var(--primary-light)] text-[var(--primary)]">
               <Wallet className="w-5 h-5" />
             </div>
           </div>
@@ -313,13 +313,13 @@ export const Dashboard: React.FC = () => {
 
         {/* Card 2: Total Income */}
         <div
-          className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
+          className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm hover:shadow-md hover:border-[var(--success)] transition-all cursor-pointer"
           onClick={() => navigate('/reports')}
           title="View Cash Flow Reports"
         >
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm text-[var(--text-secondary)] font-semibold">Total Money In</span>
-            <div className="p-2 rounded-xl bg-blue-50 text-[var(--info)]">
+            <div className="p-2 rounded-xl bg-[#ECFDF5] text-[#16A34A]">
               <ArrowUp className="w-5 h-5" />
             </div>
           </div>
@@ -331,13 +331,13 @@ export const Dashboard: React.FC = () => {
 
         {/* Card 3: Total Expenses */}
         <div
-          className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm hover:shadow-md hover:border-red-300 transition-all cursor-pointer"
+          className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm hover:shadow-md hover:border-[var(--danger)] transition-all cursor-pointer"
           onClick={() => navigate('/reports')}
           title="View Cash Flow & Expense Reports"
         >
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm text-[var(--text-secondary)] font-semibold">Total Money Out</span>
-            <div className="p-2 rounded-xl bg-red-50 text-[var(--danger)]">
+            <div className="p-2 rounded-xl bg-[#FEF2F2] text-[#DC2626]">
               <ArrowDown className="w-5 h-5" />
             </div>
           </div>
@@ -349,13 +349,13 @@ export const Dashboard: React.FC = () => {
 
         {/* Card 4: Pending / Outstanding */}
         <div
-          className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm hover:shadow-md hover:border-amber-300 transition-all cursor-pointer"
+          className="p-6 rounded-2xl bg-white border border-[var(--card-border)] shadow-sm hover:shadow-md hover:border-[var(--warning)] transition-all cursor-pointer"
           onClick={() => navigate('/expenses')}
           title="View Pending Expense Claims & Approvals"
         >
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm text-[var(--text-secondary)] font-semibold">Pending Approvals</span>
-            <div className="p-2 rounded-xl bg-amber-50 text-[var(--warning)]">
+            <div className="p-2 rounded-xl bg-[#FFF7ED] text-[#EA580C]">
               <Clock className="w-5 h-5" />
             </div>
           </div>
@@ -388,7 +388,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="min-w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-xs text-[var(--text-secondary)] uppercase">
                     <th className="pb-3">Voucher No</th>
@@ -414,7 +414,7 @@ export const Dashboard: React.FC = () => {
                       <td className="py-4 text-xs text-[var(--text-secondary)] font-medium">{txn.paymentMode}</td>
                       <td className="py-4 text-xs text-[var(--text-secondary)]">{new Date(txn.date).toLocaleDateString()}</td>
                       <td className={`py-4 text-right font-extrabold ${
-                        txn.type === 'PAYMENT_IN' ? 'text-[var(--success)]' : 'text-[var(--text-primary)]'
+                        txn.type === 'PAYMENT_IN' ? 'text-[#16A34A]' : 'text-[#DC2626]'
                       }`}>
                         {txn.type === 'PAYMENT_IN' ? '+' : '-'}{fmt(txn.amount)}
                       </td>
@@ -527,7 +527,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <div className="mt-6 pt-4 border-t border-[var(--border)] text-center">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--primary)] bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full shadow-inner">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--primary)] bg-[var(--primary-light)] border border-[var(--primary-light)] px-3 py-1 rounded-full shadow-inner">
                 Active & Audited
               </span>
             </div>

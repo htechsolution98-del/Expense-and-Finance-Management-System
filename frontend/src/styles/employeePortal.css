@@ -145,7 +145,7 @@
 
 /* Table */
 .emp-table-wrapper { overflow-x: auto; margin-top: 12px; }
-.emp-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.emp-table { width: 100%; min-width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .emp-table th { padding: 10px 12px; text-align: left; font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .emp-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #e2e8f0; }
 .emp-action-btns { display: flex; gap: 8px; }

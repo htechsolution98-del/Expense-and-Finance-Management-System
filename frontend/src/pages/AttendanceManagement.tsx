@@ -750,7 +750,7 @@ export default function AttendanceManagement() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="min-w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-white/5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                       <th className="pb-3">Date</th>
@@ -875,65 +875,65 @@ export default function AttendanceManagement() {
               <div
                 className={`att-kpi-card flex flex-col justify-between cursor-pointer transition-all border ${
                   adminFilterType === 'PRESENT'
-                    ? 'ring-2 ring-emerald-500/50 bg-emerald-500/10 border-emerald-500/30'
-                    : 'border-white/5'
+                    ? 'ring-2 ring-emerald-500/50 bg-emerald-50 border-emerald-500'
+                    : 'border-slate-200'
                 }`}
                 onClick={() => setAdminFilterType(adminFilterType === 'PRESENT' ? 'ALL' : 'PRESENT')}
               >
-                <span className="att-kpi-value text-emerald-400">{adminReport.summary.presentToday}</span>
+                <span className="att-kpi-value text-emerald-650">{adminReport.summary.presentToday}</span>
                 <span className="att-kpi-label">Present Today</span>
               </div>
               <div
                 className={`att-kpi-card flex flex-col justify-between cursor-pointer transition-all border ${
                   adminFilterType === 'LATE'
-                    ? 'ring-2 ring-amber-500/50 bg-amber-500/10 border-amber-500/30'
-                    : 'border-white/5'
+                    ? 'ring-2 ring-amber-500/50 bg-amber-50 border-amber-500'
+                    : 'border-slate-200'
                 }`}
                 onClick={() => setAdminFilterType(adminFilterType === 'LATE' ? 'ALL' : 'LATE')}
               >
-                <span className="att-kpi-value text-amber-400">{adminReport.summary.lateToday}</span>
+                <span className="att-kpi-value text-amber-650">{adminReport.summary.lateToday}</span>
                 <span className="att-kpi-label">Late Arrivals Today</span>
               </div>
               <div
                 className={`att-kpi-card flex flex-col justify-between cursor-pointer transition-all border ${
                   adminFilterType === 'ABSENT'
-                    ? 'ring-2 ring-rose-500/50 bg-rose-500/10 border-rose-500/30'
-                    : 'border-white/5'
+                    ? 'ring-2 ring-rose-500/50 bg-rose-50 border-rose-500'
+                    : 'border-slate-200'
                 }`}
                 onClick={() => setAdminFilterType(adminFilterType === 'ABSENT' ? 'ALL' : 'ABSENT')}
               >
-                <span className="att-kpi-value text-rose-400">{adminReport.summary.absentToday}</span>
+                <span className="att-kpi-value text-rose-650">{adminReport.summary.absentToday}</span>
                 <span className="att-kpi-label">Absent Today</span>
               </div>
               <div
                 className={`att-kpi-card flex flex-col justify-between cursor-pointer transition-all border ${
                   adminFilterType === 'ALL'
-                    ? 'ring-2 ring-indigo-500/50 bg-indigo-500/10 border-indigo-500/30'
-                    : 'border-white/5'
+                    ? 'ring-2 ring-[var(--primary)]/30 bg-[var(--primary-light)] border-[var(--primary)]'
+                    : 'border-slate-200'
                 }`}
                 onClick={() => setAdminFilterType('ALL')}
               >
-                <span className="att-kpi-value text-indigo-400">{adminReport.summary.totalEmployees}</span>
+                <span className="att-kpi-value text-[var(--primary)]">{adminReport.summary.totalEmployees}</span>
                 <span className="att-kpi-label">Total Strength</span>
               </div>
             </div>
           )}
 
           {/* Admin Record Tables */}
-          <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-slate-900/40">
+          <div className="glass-panel p-6 rounded-2xl border border-slate-200 bg-white">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[var(--text-primary)] flex items-center gap-2">
                   All Employee Attendance
-                  <span className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+                  <span className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
                     Live
                   </span>
                 </h3>
-                <p className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+                <p className="text-xs text-[var(--text-secondary)] mt-1 flex items-center gap-2">
                   Review active logs and check GPS/Selfie details
-                  <span className="text-gray-600">•</span>
-                  <span className="text-gray-500">
+                  <span className="text-gray-300">•</span>
+                  <span className="text-[var(--text-muted)]">
                     Updated {secondsSinceRefresh < 5 ? 'just now' : `${secondsSinceRefresh}s ago`}
                   </span>
                   <button
@@ -944,7 +944,7 @@ export default function AttendanceManagement() {
                       setLastRefresh(new Date());
                       setSecondsSinceRefresh(0);
                     }}
-                    className="text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer underline underline-offset-2"
+                    className="text-[var(--primary)] hover:underline transition-colors cursor-pointer"
                     title="Refresh now"
                   >
                     Refresh
@@ -955,7 +955,7 @@ export default function AttendanceManagement() {
                 {/* Manual Attendance Button */}
                 <button
                   onClick={() => setShowManualModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md"
                   title="Add manual attendance entry for any employee"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -974,13 +974,13 @@ export default function AttendanceManagement() {
                   </button>
                 )}
                 {/* Filter Mode Toggle */}
-                <div className="flex bg-slate-800/80 rounded-lg p-0.5 border border-white/5">
+                <div className="flex bg-slate-100 rounded-lg p-0.5 border border-slate-200">
                   <button
                     onClick={() => setAdminFilterMode('single')}
                     className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all cursor-pointer ${
                       adminFilterMode === 'single'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-[var(--primary)] text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-850'
                     }`}
                   >
                     Single Date
@@ -989,8 +989,8 @@ export default function AttendanceManagement() {
                     onClick={() => setAdminFilterMode('range')}
                     className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all cursor-pointer ${
                       adminFilterMode === 'range'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-[var(--primary)] text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-850'
                     }`}
                   >
                     Date Range
@@ -1003,26 +1003,26 @@ export default function AttendanceManagement() {
                     type="date"
                     value={adminFilterDate}
                     onChange={(e) => setAdminFilterDate(e.target.value)}
-                    className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs px-3 py-2 outline-none"
+                    className="bg-white border border-slate-200 text-slate-800 rounded-lg text-xs px-3 py-2 outline-none focus:border-[var(--primary)]"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-gray-500 uppercase font-bold mb-1">From</span>
+                      <span className="text-[9px] text-[var(--text-secondary)] uppercase font-bold mb-1">From</span>
                       <input
                         type="date"
                         value={adminStartDate}
                         onChange={(e) => setAdminStartDate(e.target.value)}
-                        className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs px-3 py-1.5 outline-none"
+                        className="bg-white border border-slate-200 text-slate-800 rounded-lg text-xs px-3 py-1.5 outline-none focus:border-[var(--primary)]"
                       />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-gray-500 uppercase font-bold mb-1">To</span>
+                      <span className="text-[9px] text-[var(--text-secondary)] uppercase font-bold mb-1">To</span>
                       <input
                         type="date"
                         value={adminEndDate}
                         onChange={(e) => setAdminEndDate(e.target.value)}
-                        className="bg-slate-800 border border-white/10 text-white rounded-lg text-xs px-3 py-1.5 outline-none"
+                        className="bg-white border border-slate-200 text-slate-800 rounded-lg text-xs px-3 py-1.5 outline-none focus:border-[var(--primary)]"
                       />
                     </div>
                   </div>
@@ -1031,9 +1031,9 @@ export default function AttendanceManagement() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="min-w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                  <tr className="border-b border-slate-200 text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider bg-slate-50">
                     <th className="pb-3">Employee</th>
                     <th className="pb-3">Check-In</th>
                     <th className="pb-3">Check-Out</th>
@@ -1043,7 +1043,7 @@ export default function AttendanceManagement() {
                     <th className="pb-3">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 text-sm">
+                <tbody className="divide-y divide-slate-100 text-sm">
                   {filteredRecords.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-6 text-center text-gray-500 font-medium">
@@ -1154,7 +1154,7 @@ export default function AttendanceManagement() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="min-w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-white/5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                     <th className="pb-3">Employee Code</th>

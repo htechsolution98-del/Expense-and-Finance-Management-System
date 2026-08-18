@@ -443,7 +443,7 @@ export const PayrollList: React.FC = () => {
           selectedBatch ? 'lg:col-span-1' : 'lg:col-span-3'
         }`}>
           <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse">
+            <table className="min-w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-white/5 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-[#0c101a]/40">
                   <th className="px-6 py-4">Batch ID / Date</th>
@@ -577,7 +577,8 @@ export const PayrollList: React.FC = () => {
 
             {/* Slips table */}
             <div className="border border-white/5 rounded-xl overflow-hidden bg-white/1">
-              <table className="w-full text-left border-collapse text-[11px]">
+              <div className="overflow-x-auto w-full">
+              <table className="min-w-full text-left border-collapse text-[11px]">
                 <thead>
                   <tr className="border-b border-white/5 text-[9px] font-bold text-gray-500 uppercase bg-[#0c101a]/30">
                     <th className="px-4 py-3">Employee</th>
@@ -681,6 +682,7 @@ export const PayrollList: React.FC = () => {
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         )}

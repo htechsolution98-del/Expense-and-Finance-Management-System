@@ -94,8 +94,8 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
   return (
     <header className="sticky top-0 z-40 w-full bg-[var(--header-bg)] border-b border-[var(--header-border)] px-6 py-4 flex items-center justify-between shadow-sm">
       {/* Dynamic Title */}
-      <div>
-        <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">{title}</h1>
+      <div className="min-w-0 flex-1 mr-4">
+        <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)] truncate">{title}</h1>
       </div>
 
       {/* Quick Menu */}
@@ -103,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
         {/* Dynamic Company Status */}
         <div 
           onClick={() => navigate('/settings')}
-          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100 text-xs text-[var(--primary)] font-semibold shadow-inner cursor-pointer hover:bg-emerald-100 transition-colors"
+          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--primary-light)] border border-[var(--primary-light)] text-xs text-[var(--primary)] font-semibold shadow-inner cursor-pointer hover:opacity-90 transition-opacity"
           title="Go to Company Settings"
         >
           <Building className="w-3.5 h-3.5" />
@@ -160,25 +160,25 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
       {/* Change Password Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative text-left">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-md shadow-2xl relative text-left">
             <button 
               onClick={() => setShowPasswordModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
             
-            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-              <Key className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+              <Key className="w-5 h-5 text-[var(--primary)]" />
               Change Password
             </h3>
-            <p className="text-xs text-gray-400 mb-6">
+            <p className="text-xs text-slate-500 mb-6">
               Update your account password. Make sure it's secure.
             </p>
 
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2">
+                <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-2">
                   Current Password
                 </label>
                 <input 
@@ -186,13 +186,13 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
                   required
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
-                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[var(--primary)] transition-colors"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-950 outline-none focus:border-[var(--primary)] transition-colors"
                   placeholder="Enter current password"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2">
+                <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-2">
                   New Password
                 </label>
                 <input 
@@ -200,13 +200,13 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[var(--primary)] transition-colors"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-950 outline-none focus:border-[var(--primary)] transition-colors"
                   placeholder="Enter new password (min. 6 chars)"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2">
+                <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-2">
                   Confirm New Password
                 </label>
                 <input 
@@ -214,19 +214,19 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[var(--primary)] transition-colors"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-950 outline-none focus:border-[var(--primary)] transition-colors"
                   placeholder="Confirm new password"
                 />
               </div>
 
               {passwordError && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-medium">
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-medium">
                   {passwordError}
                 </div>
               )}
 
               {passwordSuccess && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-medium">
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-medium">
                   {passwordSuccess}
                 </div>
               )}
@@ -234,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
               <button
                 type="submit"
                 disabled={submittingPassword}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl py-3 font-bold transition-colors cursor-pointer mt-2 shadow-md shadow-emerald-600/10"
+                className="w-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 text-white rounded-xl py-3 font-bold transition-colors cursor-pointer mt-2 shadow-md shadow-emerald-600/10"
               >
                 {submittingPassword ? 'Updating...' : 'Update Password'}
               </button>

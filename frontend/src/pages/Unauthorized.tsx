@@ -6,7 +6,7 @@ export const Unauthorized: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="relative min-h-screen w-screen flex items-center justify-center bg-[#080b11] overflow-hidden px-4">
+    <div className="relative min-h-screen w-full flex items-center justify-center bg-[#080b11] overflow-hidden px-4">
       {/* Background glowing decorations */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-red-500/5 blur-[120px] animate-pulse-slow"></div>
 

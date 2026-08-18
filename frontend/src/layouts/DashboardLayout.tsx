@@ -46,29 +46,29 @@ export const DashboardLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex w-screen min-h-screen bg-[var(--background)] text-[var(--text-primary)]">
+    <div className="flex w-full h-screen bg-[var(--background)] text-[var(--text-primary)] overflow-hidden">
       {/* Sidebar Navigation */}
       <Sidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         <Header title={getHeaderTitle(location.pathname)} />
 
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto">
           <Outlet />
         </main>
 
         {/* Footer */}
-        <footer className="bg-[var(--footer-bg)] text-[var(--footer-text)] px-8 py-6 border-t border-slate-800 text-center text-xs font-semibold mt-auto">
+        <footer className="bg-[var(--card)] text-[var(--text-secondary)] px-8 py-5 border-t border-[var(--card-border)] text-center text-xs font-semibold mt-auto">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
               <span>© {new Date().getFullYear()} Antigravity Financial Control Portal. All rights reserved.</span>
             </div>
             <div className="flex gap-4">
               <a href="#" className="text-[var(--primary)] hover:underline">Privacy Policy</a>
-              <span className="text-slate-700">|</span>
+              <span className="text-slate-300">|</span>
               <a href="#" className="text-[var(--primary)] hover:underline">Terms of Service</a>
-              <span className="text-slate-700">|</span>
+              <span className="text-slate-300">|</span>
               <a href="#" className="text-[var(--primary)] hover:underline">Support Desk</a>
             </div>
           </div>

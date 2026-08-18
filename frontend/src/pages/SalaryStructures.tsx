@@ -229,7 +229,7 @@ export const SalaryStructures: React.FC = () => {
       {/* Salary Structures Table */}
       <div className="rounded-2xl glass-panel bg-card-dark/20 border border-white/5 overflow-hidden shadow-xl">
         <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse">
+          <table className="min-w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/5 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-[#0c101a]/40">
                 <th className="px-6 py-4">Employee</th>

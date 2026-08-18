@@ -336,28 +336,28 @@ export const ExpensesList: React.FC = () => {
     let classes = '';
     switch (status) {
       case 'DRAFT':
-        classes = 'bg-gray-500/10 border-gray-500/25 text-gray-400';
+        classes = 'bg-slate-100 border-slate-200 text-slate-700';
         break;
       case 'SUBMITTED':
-        classes = 'bg-blue-500/10 border-blue-500/25 text-blue-400';
+        classes = 'bg-blue-50 border-blue-100 text-blue-700';
         break;
       case 'UNDER_REVIEW':
-        classes = 'bg-amber-500/10 border-amber-500/25 text-amber-400 animate-pulse';
+        classes = 'bg-amber-50 border-amber-100 text-amber-700 animate-pulse';
         break;
       case 'RETURNED_FOR_CORRECTION':
-        classes = 'bg-orange-500/10 border-orange-500/25 text-orange-400';
+        classes = 'bg-orange-50 border-orange-100 text-orange-700';
         break;
       case 'APPROVED':
-        classes = 'bg-green-500/10 border-green-500/25 text-green-400';
+        classes = 'bg-emerald-50 border-emerald-100 text-emerald-700';
         break;
       case 'REJECTED':
-        classes = 'bg-red-500/10 border-red-500/25 text-red-400';
+        classes = 'bg-red-50 border-red-100 text-red-700';
         break;
       case 'REIMBURSED':
-        classes = 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400';
+        classes = 'bg-emerald-50 border-emerald-100 text-emerald-700';
         break;
       default:
-        classes = 'bg-gray-500/10 border-gray-500/25 text-gray-400';
+        classes = 'bg-slate-100 border-slate-200 text-slate-700';
     }
     return (
       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border capitalize ${classes}`}>
@@ -392,10 +392,10 @@ export const ExpensesList: React.FC = () => {
       {/* Header section */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
             Office & Staff Expenses
           </h1>
-          <p className="text-gray-400 mt-1.5 text-sm">
+          <p className="text-[var(--text-secondary)] mt-1.5 text-sm">
             File company expense reports, monitor review sequences, and settle payouts.
           </p>
         </div>
@@ -404,7 +404,7 @@ export const ExpensesList: React.FC = () => {
           <button
             onClick={fetchExpenses}
             disabled={loading}
-            className="p-3 rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+            className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-all cursor-pointer disabled:opacity-50"
             title="Refresh List"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -412,7 +412,7 @@ export const ExpensesList: React.FC = () => {
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 font-semibold text-white text-sm shadow-lg shadow-indigo-500/20 active:scale-98 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] font-semibold text-white text-sm shadow-lg shadow-[var(--primary)]/10 active:scale-98 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>File Expense</span>
@@ -430,13 +430,13 @@ export const ExpensesList: React.FC = () => {
       {/* Main layout: Grid of list + review side detail sheet */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Expenses List */}
-        <div className={`rounded-2xl glass-panel bg-card-dark/20 border border-white/5 overflow-hidden shadow-xl ${
+        <div className={`rounded-2xl glass-panel bg-white border border-[var(--border)] overflow-hidden shadow-xl ${
           selectedExpense ? 'lg:col-span-2' : 'lg:col-span-3'
         }`}>
           <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse">
+            <table className="min-w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/5 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-[#0c101a]/40">
+                <tr className="border-b border-[var(--border)] text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider bg-slate-50">
                   <th className="px-6 py-4">Expense No</th>
                   <th className="px-6 py-4">Employee</th>
                   <th className="px-6 py-4">Category / Date</th>
@@ -445,7 +445,7 @@ export const ExpensesList: React.FC = () => {
                   <th className="px-6 py-4 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 text-xs">
+              <tbody className="divide-y divide-[var(--border)] text-xs text-[var(--text-primary)]">
                 {loading && expenses.length === 0 ? (
                   [1, 2, 3].map((n) => (
                     <tr key={n} className="animate-pulse">
@@ -463,23 +463,23 @@ export const ExpensesList: React.FC = () => {
                     <tr
                       key={exp.id}
                       onClick={() => setSelectedExpense(exp)}
-                      className={`hover:bg-white/2 transition-colors cursor-pointer ${
-                        selectedExpense?.id === exp.id ? 'bg-indigo-500/5' : ''
+                      className={`hover:bg-slate-50 transition-colors cursor-pointer ${
+                        selectedExpense?.id === exp.id ? 'bg-emerald-500/5' : ''
                       }`}
                     >
-                      <td className="px-6 py-4 font-bold text-white font-mono">
+                      <td className="px-6 py-4 font-bold text-[var(--text-primary)] font-mono">
                         {exp.expenseNo}
                       </td>
 
-                      <td className="px-6 py-4 text-gray-300 font-medium">
+                      <td className="px-6 py-4 text-[var(--text-secondary)] font-medium">
                         {exp.employee?.name}
                       </td>
 
                       <td className="px-6 py-4 space-y-1">
-                        <span className="text-gray-400 font-semibold block">
+                        <span className="text-[var(--text-primary)] font-semibold block">
                           {exp.category?.name}
                         </span>
-                        <span className="text-[10px] text-gray-500 font-mono">
+                        <span className="text-[10px] text-[var(--text-muted)] font-mono">
                           {new Date(exp.date).toLocaleDateString('en-IN', {
                             year: 'numeric',
                             month: 'short',
@@ -488,11 +488,11 @@ export const ExpensesList: React.FC = () => {
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-gray-400 max-w-xs truncate">
+                      <td className="px-6 py-4 text-[var(--text-secondary)] max-w-xs truncate">
                         {exp.purpose}
                       </td>
 
-                      <td className="px-6 py-4 text-right font-black font-mono text-white text-sm">
+                      <td className="px-6 py-4 text-right font-black font-mono text-[var(--text-primary)] text-sm">
                         ₹{exp.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
 
@@ -509,13 +509,13 @@ export const ExpensesList: React.FC = () => {
 
         {/* Side Workflow review sheet */}
         {selectedExpense && (
-          <div className="rounded-2xl glass-panel p-6 bg-card-dark/30 border border-white/5 shadow-xl space-y-6 animate-slide-in-right relative">
+          <div className="rounded-2xl glass-panel p-6 bg-[var(--card)] border border-[var(--card-border)] shadow-xl space-y-6 animate-slide-in-right relative">
             <div className="absolute top-4 right-4 flex gap-3">
               {(user.role === 'SUPER_ADMIN' || user.id === selectedExpense.createdBy) && 
                 (selectedExpense.status === 'RETURNED_FOR_CORRECTION' || selectedExpense.status === 'DRAFT' || selectedExpense.status === 'REJECTED') && (
                 <button
                   onClick={() => openEditModal(selectedExpense)}
-                  className="text-gray-500 hover:text-indigo-400 transition-colors cursor-pointer"
+                  className="text-slate-400 hover:text-[var(--primary)] transition-colors cursor-pointer"
                   title="Edit & Resubmit"
                 >
                   <Edit className="w-5 h-5" />
@@ -524,7 +524,7 @@ export const ExpensesList: React.FC = () => {
               {user.role === 'SUPER_ADMIN' && selectedExpense.status !== 'REIMBURSED' && (
                 <button
                   onClick={() => handleDeleteExpense(selectedExpense.id)}
-                  className="text-gray-500 hover:text-red-500 transition-colors cursor-pointer"
+                  className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
                   title="Delete Expense"
                 >
                   <Trash2 className="w-5 h-5" />
@@ -532,7 +532,7 @@ export const ExpensesList: React.FC = () => {
               )}
               <button
                 onClick={() => setSelectedExpense(null)}
-                className="text-gray-500 hover:text-white transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -540,51 +540,51 @@ export const ExpensesList: React.FC = () => {
 
             {/* Header info */}
             <div>
-              <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-400 block mb-1">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-[var(--primary)] block mb-1">
                 Claim Verification Details
               </span>
-              <h2 className="text-xl font-extrabold text-white font-mono">
+              <h2 className="text-xl font-extrabold text-[var(--text-primary)] font-mono">
                 {selectedExpense.expenseNo}
               </h2>
             </div>
 
             {/* Core facts */}
-            <div className="p-4 rounded-xl bg-white/2 border border-white/5 space-y-3 text-xs">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
               <div className="flex justify-between">
-                <span className="text-gray-500">Employee:</span>
-                <span className="font-bold text-white">{selectedExpense.employee?.name}</span>
+                <span className="text-slate-500">Employee:</span>
+                <span className="font-bold text-[var(--text-primary)]">{selectedExpense.employee?.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Purpose:</span>
-                <span className="text-gray-300 font-medium">{selectedExpense.purpose}</span>
+                <span className="text-slate-500">Purpose:</span>
+                <span className="text-[var(--text-secondary)] font-medium">{selectedExpense.purpose}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Payment Mode:</span>
-                <span className="text-gray-400 font-bold uppercase">{selectedExpense.paymentMode.replace('_', ' ')}</span>
+                <span className="text-slate-500">Payment Mode:</span>
+                <span className="text-[var(--text-secondary)] font-bold uppercase">{selectedExpense.paymentMode.replace('_', ' ')}</span>
               </div>
               
               {selectedExpense.receiptUrl && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Receipt Bill:</span>
-                  <a href={`http://localhost:5000${selectedExpense.receiptUrl}`} target="_blank" rel="noreferrer" className="text-indigo-400 font-bold hover:underline">View Receipt</a>
+                  <span className="text-slate-500">Receipt Bill:</span>
+                  <a href={`http://localhost:5000${selectedExpense.receiptUrl}`} target="_blank" rel="noreferrer" className="text-[var(--primary)] font-bold hover:underline">View Receipt</a>
                 </div>
               )}
               {selectedExpense.paymentReference && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">UTR / Ref:</span>
-                  <span className="text-gray-300 font-medium">{selectedExpense.paymentReference}</span>
+                  <span className="text-slate-500">UTR / Ref:</span>
+                  <span className="text-[var(--text-secondary)] font-medium">{selectedExpense.paymentReference}</span>
                 </div>
               )}
               {selectedExpense.paymentProofUrl && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Payment Proof:</span>
-                  <a href={`http://localhost:5000${selectedExpense.paymentProofUrl}`} target="_blank" rel="noreferrer" className="text-green-400 font-bold hover:underline">View Proof</a>
+                  <span className="text-slate-500">Payment Proof:</span>
+                  <a href={`http://localhost:5000${selectedExpense.paymentProofUrl}`} target="_blank" rel="noreferrer" className="text-emerald-600 font-bold hover:underline">View Proof</a>
                 </div>
               )}
 
-              <div className="flex justify-between items-baseline pt-2 border-t border-white/5">
-                <span className="text-gray-500 font-bold uppercase text-[10px]">Requested Amount:</span>
-                <span className="text-base font-black text-white font-mono">
+              <div className="flex justify-between items-baseline pt-2 border-t border-slate-200">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">Requested Amount:</span>
+                <span className="text-base font-black text-[var(--text-primary)] font-mono">
                   ₹{selectedExpense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -592,13 +592,13 @@ export const ExpensesList: React.FC = () => {
 
             {/* Workflow approval tracks */}
             <div className="space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1.5">
+                <Shield className="w-4 h-4 text-[var(--primary)]" />
                 <span>Approval Sequence Steps</span>
               </h3>
 
               {!selectedExpense.approvalRequest ? (
-                <div className="p-4 rounded-xl border border-white/5 bg-white/1 text-center text-xs text-gray-500 italic">
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-center text-xs text-slate-500 italic">
                   No active approval track. Re-submit this draft to trigger.
                 </div>
               ) : (
@@ -606,11 +606,11 @@ export const ExpensesList: React.FC = () => {
                   {selectedExpense.approvalRequest.approvalSteps.map((step) => {
                     const isActive = selectedExpense.approvalRequest?.status === 'PENDING' && selectedExpense.approvalRequest?.currentStep === step.stepNumber;
                     
-                    let statusColor = 'text-gray-500 border-white/5 bg-white/1';
-                    if (step.status === 'APPROVED') statusColor = 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5';
-                    if (step.status === 'REJECTED') statusColor = 'text-red-400 border-red-500/20 bg-red-500/5';
-                    if (step.status === 'RETURNED') statusColor = 'text-orange-400 border-orange-500/20 bg-orange-500/5';
-                    if (isActive) statusColor = 'text-amber-400 border-amber-500/30 bg-amber-500/10';
+                    let statusColor = 'text-slate-500 border-slate-200 bg-slate-50';
+                    if (step.status === 'APPROVED') statusColor = 'text-emerald-600 border-emerald-500/20 bg-emerald-50';
+                    if (step.status === 'REJECTED') statusColor = 'text-red-600 border-red-500/20 bg-red-50';
+                    if (step.status === 'RETURNED') statusColor = 'text-orange-600 border-orange-500/20 bg-orange-50';
+                    if (isActive) statusColor = 'text-amber-700 border-amber-500/30 bg-amber-50';
 
                     return (
                       <div
@@ -619,7 +619,7 @@ export const ExpensesList: React.FC = () => {
                       >
                         <div className="flex justify-between items-center">
                           <span className="font-bold flex items-center gap-2">
-                            <span className="text-[10px] w-5 h-5 rounded-full bg-white/5 border border-white/5 flex items-center justify-center">
+                            <span className="text-[10px] w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-650">
                               {step.stepNumber + 1}
                             </span>
                             <span>{step.roleName} Role</span>
@@ -631,13 +631,13 @@ export const ExpensesList: React.FC = () => {
                         </div>
 
                         {step.comments && (
-                          <p className="text-[11px] text-gray-400 leading-relaxed italic pl-7 border-l border-white/10">
+                          <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed italic pl-7 border-l border-slate-200">
                             "{step.comments}"
                           </p>
                         )}
 
                         {step.actionAt && (
-                          <span className="text-[9px] text-gray-500 font-mono text-right">
+                          <span className="text-[9px] text-[var(--text-muted)] font-mono text-right">
                             Reviewed on: {new Date(step.actionAt).toLocaleDateString()}
                           </span>
                         )}
@@ -650,14 +650,14 @@ export const ExpensesList: React.FC = () => {
 
             {/* REVIEWER ACTION CARD */}
             {isUserActiveApprover() && (
-              <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 space-y-4 animate-zoom-in">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
-                  <Clock className="w-4 h-4" />
+              <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 space-y-4 animate-zoom-in">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-750">
+                  <Clock className="w-4 h-4 text-amber-600" />
                   <span>ACTION REQUIRED: Pending your Review ({activeStepRole})</span>
                 </div>
 
                 {actionError && (
-                  <div className="p-2.5 rounded bg-red-500/10 border border-red-500/20 text-[10px] text-red-400">
+                  <div className="p-2.5 rounded bg-red-100 border border-red-250 text-[10px] text-red-700">
                     {actionError}
                   </div>
                 )}
@@ -665,7 +665,7 @@ export const ExpensesList: React.FC = () => {
                 <textarea
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
-                  className="block w-full px-3 py-2 rounded-lg bg-[#0e1420] border border-white/5 focus:border-amber-500 text-xs text-white outline-none h-16 resize-none"
+                  className="block w-full px-3 py-2 rounded-lg bg-white border border-slate-200 focus:border-amber-500 text-xs text-slate-900 outline-none h-16 resize-none"
                   placeholder="Review comments / approval remarks..."
                 />
 
@@ -673,7 +673,7 @@ export const ExpensesList: React.FC = () => {
                   <button
                     onClick={() => handleWorkflowAction('approve')}
                     disabled={actionLoading}
-                    className="py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-[10px] uppercase shadow disabled:opacity-50 cursor-pointer"
+                    className="py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] uppercase shadow disabled:opacity-50 cursor-pointer"
                   >
                     Approve
                   </button>
@@ -687,7 +687,7 @@ export const ExpensesList: React.FC = () => {
                   <button
                     onClick={() => handleWorkflowAction('reject')}
                     disabled={actionLoading}
-                    className="py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-[10px] uppercase shadow disabled:opacity-50 cursor-pointer"
+                    className="py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] uppercase shadow disabled:opacity-50 cursor-pointer"
                   >
                     Reject
                   </button>
@@ -697,26 +697,26 @@ export const ExpensesList: React.FC = () => {
 
             {/* CASHIER PAYOUT ACTION CARD */}
             {selectedExpense.status === 'APPROVED' && canPay && (
-              <form onSubmit={handlePayoutSubmit} className="p-4 rounded-xl border border-green-500/20 bg-green-500/5 space-y-4 animate-zoom-in">
-                <div className="flex items-center gap-2 text-xs font-bold text-green-400">
-                  <Wallet className="w-4 h-4" />
+              <form onSubmit={handlePayoutSubmit} className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 space-y-4 animate-zoom-in">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                  <Wallet className="w-4 h-4 text-emerald-600" />
                   <span>Settle Approved Expense Reimbursement</span>
                 </div>
 
                 {payoutError && (
-                  <div className="p-2.5 rounded bg-red-500/10 border border-red-500/20 text-[10px] text-red-400">
+                  <div className="p-2.5 rounded bg-red-100 border border-red-200 text-[10px] text-red-700">
                     {payoutError}
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1.5">
                     Payout Source Account
                   </label>
                   <select
                     value={payoutAccountId}
                     onChange={(e) => setPayoutAccountId(e.target.value)}
-                    className="block w-full px-3 py-2 rounded-lg bg-[#0e1420] border border-white/5 focus:border-green-500 text-xs text-white outline-none"
+                    className="block w-full px-3 py-2 rounded-lg bg-white border border-slate-200 focus:border-[var(--primary)] text-xs text-slate-900 outline-none"
                     required
                   >
                     <option value="">-- Choose Payout Source --</option>
@@ -730,35 +730,35 @@ export const ExpensesList: React.FC = () => {
 
                 {/* Payment Reference / UTR */}
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1.5">
                     UTR / Reference Number (Optional)
                   </label>
                   <input
                     type="text"
                     value={paymentReference}
                     onChange={(e) => setPaymentReference(e.target.value)}
-                    className="block w-full px-3 py-2 rounded-lg bg-[#0e1420] border border-white/5 focus:border-green-500 text-xs text-white outline-none"
+                    className="block w-full px-3 py-2 rounded-lg bg-white border border-slate-200 focus:border-[var(--primary)] text-xs text-slate-900 outline-none"
                     placeholder="e.g. UTR-123456789"
                   />
                 </div>
 
                 {/* Payment Proof Upload */}
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1.5">
                     Upload Proof (Cheque / Screenshot)
                   </label>
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,application/pdf"
                     onChange={(e) => setPaymentProofFile(e.target.files ? e.target.files[0] : null)}
-                    className="block w-full px-3 py-2 rounded-lg bg-[#0e1420] border border-white/5 text-gray-400 text-xs focus:outline-none file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-green-500/20 file:text-green-400 hover:file:bg-green-500/30 transition-colors"
+                    className="block w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-500 text-xs focus:outline-none file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-[var(--primary-light)] file:text-[var(--primary)] hover:file:bg-[var(--primary-light)]/85 transition-colors"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={payoutLoading}
-                  className="w-full py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-xs uppercase shadow-md shadow-green-500/10 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
+                  className="w-full py-2.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-bold text-xs uppercase shadow-md shadow-[var(--primary)]/10 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
                 >
                   {payoutLoading ? 'Executing Payout...' : 'Disburse Payout Settlement'}
                 </button>
@@ -771,12 +771,12 @@ export const ExpensesList: React.FC = () => {
       {/* Add Expense Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl glass-panel-glow border border-white/10 bg-[#090d16] overflow-hidden animate-zoom-in">
+          <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-2xl animate-zoom-in">
             {/* Header */}
-            <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-lg font-bold text-white">
+                <Receipt className="w-5 h-5 text-[var(--primary)]" />
+                <h3 className="text-lg font-bold text-slate-900">
                   {isEditMode ? 'Edit & Resubmit Claim' : 'File Office / Staff Expense'}
                 </h3>
               </div>
@@ -786,7 +786,7 @@ export const ExpensesList: React.FC = () => {
                   setIsEditMode(false);
                   setEditExpenseId('');
                 }}
-                className="text-gray-500 hover:text-white transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -795,7 +795,7 @@ export const ExpensesList: React.FC = () => {
             {/* Form */}
             <form onSubmit={handleCreateExpense} className="p-6 space-y-4">
               {formError && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
                   {formError}
                 </div>
               )}
@@ -803,13 +803,13 @@ export const ExpensesList: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 {/* Employee Selection */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     Submitting Employee
                   </label>
                   <select
                     value={employeeId}
                     onChange={(e) => setEmployeeId(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                     required
                   >
                     <option value="">-- Choose Employee --</option>
@@ -821,14 +821,14 @@ export const ExpensesList: React.FC = () => {
 
                 {/* Expense Category */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     Expense Category
                   </label>
                   <div className="flex gap-2">
                     <select
                       value={categoryId}
                       onChange={(e) => setCategoryId(e.target.value)}
-                      className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                      className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                       required
                     >
                       <option value="">-- Choose Category --</option>
@@ -841,7 +841,7 @@ export const ExpensesList: React.FC = () => {
                         <button
                           type="button"
                           onClick={handleCreateCategory}
-                          className="px-3 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-xs text-indigo-400 transition-colors"
+                          className="px-3 py-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs text-[var(--primary)] transition-colors"
                           title="Add New Category"
                         >
                           ➕
@@ -852,7 +852,7 @@ export const ExpensesList: React.FC = () => {
                               type="button"
                               onClick={handleEditCategory}
                               disabled={!categoryId}
-                              className={`px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-yellow-400 transition-colors ${!categoryId ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
+                              className={`px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-amber-600 transition-colors ${!categoryId ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100'}`}
                               title="Edit Category"
                             >
                               ✏️
@@ -861,7 +861,7 @@ export const ExpensesList: React.FC = () => {
                               type="button"
                               onClick={handleDeleteCategory}
                               disabled={!categoryId}
-                              className={`px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-red-400 transition-colors ${!categoryId ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
+                              className={`px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-red-650 transition-colors ${!categoryId ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100'}`}
                               title="Delete Category"
                             >
                               🗑️
@@ -875,7 +875,7 @@ export const ExpensesList: React.FC = () => {
 
                 {/* Amount */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     Amount (₹)
                   </label>
                   <input
@@ -883,7 +883,7 @@ export const ExpensesList: React.FC = () => {
                     step="0.01"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none font-mono"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none font-mono"
                     placeholder="0.00"
                     required
                   />
@@ -891,27 +891,27 @@ export const ExpensesList: React.FC = () => {
 
                 {/* Date */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     Expense Date
                   </label>
                   <input
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none font-mono"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none font-mono"
                     required
                   />
                 </div>
 
                 {/* Payment Mode */}
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     Proposed Payout Mode
                   </label>
                   <select
                     value={paymentMode}
                     onChange={(e) => setPaymentMode(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                   >
                     <option value="CASH">Physical Cash Box</option>
                     <option value="UPI">UPI Digital Wallet</option>
@@ -920,12 +920,12 @@ export const ExpensesList: React.FC = () => {
 
                 {/* Submission Checkbox */}
                 <div className="col-span-2 sm:col-span-1 flex items-center pl-2 pt-6">
-                  <label className="flex items-center gap-2 text-xs font-bold text-gray-300 cursor-pointer select-none">
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={submitDirectly}
                       onChange={(e) => setSubmitDirectly(e.target.checked)}
-                      className="w-4.5 h-4.5 rounded border-white/5 bg-[#0e1420] text-indigo-500 focus:ring-indigo-500/20"
+                      className="w-4.5 h-4.5 rounded border-slate-350 bg-white text-[var(--primary)] focus:ring-[var(--primary)]/10"
                     />
                     <span>Submit Directly for Approval</span>
                   </label>
@@ -934,14 +934,14 @@ export const ExpensesList: React.FC = () => {
 
               {/* Purpose */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                   Expense Description / Purpose
                 </label>
                 <input
                   type="text"
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                  className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                   placeholder="e.g. Flight travel tickets for Bangalore conference"
                   required
                 />
@@ -949,38 +949,38 @@ export const ExpensesList: React.FC = () => {
 
               {/* Receipt Upload */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                   Upload Bill / Receipt (Image or PDF)
                 </label>
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp,application/pdf"
                   onChange={(e) => setReceiptFile(e.target.files ? e.target.files[0] : null)}
-                  className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 text-gray-400 text-sm focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30 transition-colors"
+                  className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-500 text-sm focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[var(--primary-light)] file:text-[var(--primary)] hover:file:bg-[var(--primary-light)]/85 transition-colors"
                   {...(!isEditMode && { required: true })}
                 />
-                {isEditMode && <span className="text-[10px] text-gray-500 mt-1 block">Leave empty to keep existing receipt.</span>}
+                {isEditMode && <span className="text-[10px] text-slate-400 mt-1 block">Leave empty to keep existing receipt.</span>}
               </div>
 
               {/* UPI Payment Screenshot */}
               {paymentMode === 'UPI' && (
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                     Upload UPI Payment Screenshot (Required)
                   </label>
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,application/pdf"
                     onChange={(e) => setPaymentProofFile(e.target.files ? e.target.files[0] : null)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 text-gray-400 text-sm focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30 transition-colors"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-500 text-sm focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[var(--primary-light)] file:text-[var(--primary)] hover:file:bg-[var(--primary-light)]/85 transition-colors"
                     {...(!isEditMode && { required: true })}
                   />
-                  {isEditMode && <span className="text-[10px] text-gray-500 mt-1 block">Leave empty to keep existing screenshot.</span>}
+                  {isEditMode && <span className="text-[10px] text-slate-400 mt-1 block">Leave empty to keep existing screenshot.</span>}
                 </div>
               )}
 
               {/* Submit Buttons */}
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-white/5">
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => {
@@ -988,7 +988,7 @@ export const ExpensesList: React.FC = () => {
                     setIsEditMode(false);
                     setEditExpenseId('');
                   }}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 text-gray-400 text-sm hover:text-white transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-sm hover:text-slate-900 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -996,7 +996,7 @@ export const ExpensesList: React.FC = () => {
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-650 text-white text-sm font-semibold shadow-lg shadow-indigo-500/20 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-semibold shadow-lg shadow-[var(--primary)]/10 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
                 >
                   {formLoading ? 'Submitting...' : submitDirectly ? (isEditMode ? 'Update & Resubmit' : 'Submit Claim') : (isEditMode ? 'Update Draft' : 'Save as Draft')}
                 </button>

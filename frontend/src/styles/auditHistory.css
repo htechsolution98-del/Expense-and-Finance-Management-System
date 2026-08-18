@@ -86,7 +86,7 @@
   border-radius: 14px;
   overflow-x: auto;
 }
-.aud-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.aud-table { width: 100%; min-width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .aud-table th {
   padding: 12px 16px;
   text-align: left;

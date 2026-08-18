@@ -50,7 +50,7 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-screen flex items-center justify-center bg-[#080b11] overflow-hidden px-4">
+    <div className="relative min-h-screen w-full flex items-center justify-center bg-[#080b11] overflow-hidden px-4">
       {/* Background radial gradients for glowing aesthetic */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-indigo-500/10 blur-[120px] animate-pulse-slow"></div>
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-violet-500/10 blur-[120px] animate-pulse-slow"></div>

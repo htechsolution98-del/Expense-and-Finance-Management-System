@@ -14,8 +14,9 @@
   gap: 20px;
   padding: 32px;
   border-radius: 24px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255,255,255,0.05);
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(12px);
 }
 
@@ -73,34 +74,36 @@
 @keyframes att-pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
 /* ── Today Timeline ─────────────────────────────────────────────────────── */
-.att-timeline { display: flex; flex-direction: column; gap: 12px; padding: 20px; background: rgba(15,23,42,0.4); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
+.att-timeline { display: flex; flex-direction: column; gap: 12px; padding: 20px; background: var(--background); border-radius: 16px; border: 1px solid var(--card-border); }
 .att-timeline-item { display: flex; align-items: center; gap: 12px; }
 .att-timeline-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-.att-timeline-dot.checkin { background: #10b981; }
+.att-timeline-dot.checkin { background: var(--primary); }
 .att-timeline-dot.break { background: #f59e0b; }
 .att-timeline-dot.checkout { background: #ef4444; }
-.att-timeline-line { width: 2px; height: 20px; background: rgba(255,255,255,0.1); margin-left: 5px; }
-.att-timeline-time { font-size: 0.85rem; font-weight: 700; color: #e2e8f0; min-width: 70px; }
-.att-timeline-label { font-size: 0.8rem; color: #94a3b8; }
+.att-timeline-line { width: 2px; height: 20px; background: var(--border); margin-left: 5px; }
+.att-timeline-time { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); min-width: 70px; }
+.att-timeline-label { font-size: 0.8rem; color: var(--text-secondary); }
 
 /* ── KPI Cards ──────────────────────────────────────────────────────────── */
 .att-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 .att-kpi-card {
-  padding: 20px;
+  padding: 24px 20px;
   border-radius: 16px;
-  background: rgba(15,23,42,0.5);
-  border: 1px solid rgba(255,255,255,0.05);
+  background: var(--card);
+  border: 1px solid var(--card-border);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
 }
 .att-kpi-card:hover {
   transform: translateY(-2px);
-  background: rgba(15, 23, 42, 0.75);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: #f8fafc;
+  border-color: var(--primary);
+  box-shadow: 0 8px 16px -2px rgba(15, 143, 91, 0.08);
 }
-.att-kpi-value { font-size: 2rem; font-weight: 900; color: white; }
-.att-kpi-label { font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+.att-kpi-value { font-size: 2.25rem; font-weight: 900; line-height: 1; color: var(--text-primary); }
+.att-kpi-label { font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 8px; }
 
 /* ── Selfie Capture ─────────────────────────────────────────────────────── */
 .att-selfie-overlay {
@@ -117,10 +120,10 @@
 .att-config-field label { display: block; font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
 .att-config-field input, .att-config-field select {
   width: 100%; padding: 10px 14px; border-radius: 12px;
-  background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1);
-  color: white; font-size: 0.9rem; outline: none;
+  background: #ffffff; border: 1px solid var(--input-border);
+  color: var(--text-primary); font-size: 0.9rem; outline: none;
 }
-.att-config-field input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+.att-config-field input:focus, .att-config-field select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15, 143, 91, 0.15); }
 .att-config-toggle { display: flex; align-items: center; gap: 10px; }
 .att-config-toggle input[type="checkbox"] { width: 20px; height: 20px; accent-color: #6366f1; cursor: pointer; }
 

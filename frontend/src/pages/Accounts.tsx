@@ -136,10 +136,10 @@ export const Accounts: React.FC = () => {
       {/* Header section */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
             Financial Accounts
           </h1>
-          <p className="text-gray-400 mt-1.5 text-sm">
+          <p className="text-[var(--text-secondary)] mt-1.5 text-sm">
             Manage your company's cash boxes, bank accounts, and digital wallet channels.
           </p>
         </div>
@@ -148,7 +148,7 @@ export const Accounts: React.FC = () => {
           <button
             onClick={fetchAccounts}
             disabled={loading}
-            className="p-3 rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+            className="p-3 rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all cursor-pointer disabled:opacity-50"
             title="Refresh Account Data"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -156,7 +156,7 @@ export const Accounts: React.FC = () => {
 
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 font-semibold text-white text-sm shadow-lg shadow-indigo-500/20 active:scale-98 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] font-semibold text-white text-sm shadow-lg shadow-[var(--primary)]/15 active:scale-98 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Account</span>
@@ -165,8 +165,8 @@ export const Accounts: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-sm text-red-400">
-          <AlertCircle className="w-5 h-5 shrink-0" />
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 text-sm text-red-700">
+          <AlertCircle className="w-5 h-5 shrink-0 text-red-650" />
           <span>{error}</span>
         </div>
       )}
@@ -175,7 +175,7 @@ export const Accounts: React.FC = () => {
       {loading && accounts.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-48 rounded-2xl glass-panel animate-pulse bg-white/5 border border-white/5"></div>
+            <div key={n} className="h-48 rounded-2xl animate-pulse bg-white border border-slate-200"></div>
           ))}
         </div>
       ) : (
@@ -183,27 +183,21 @@ export const Accounts: React.FC = () => {
           {accounts.map((account) => (
             <div
               key={account.id}
-              className="group relative rounded-2xl glass-panel p-6 bg-card-dark/40 border border-white/5 hover:border-indigo-500/20 shadow-md transition-all duration-300 hover:shadow-indigo-500/5 hover:-translate-y-0.5 overflow-hidden"
+              className="group relative rounded-2xl p-6 bg-white border border-slate-200 hover:border-[var(--primary)]/30 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 overflow-hidden"
             >
               {/* Card background glows */}
-              <div className={`absolute top-0 right-0 w-24 h-24 rounded-full filter blur-[40px] opacity-10 transition-opacity group-hover:opacity-20 pointer-events-none z-0 ${
-                account.type === 'BANK' ? 'bg-indigo-500' : 'bg-emerald-500'
-              }`}></div>
+              <div className={`absolute top-0 right-0 w-24 h-24 rounded-full filter blur-[40px] opacity-5 transition-opacity group-hover:opacity-10 pointer-events-none z-0 bg-[var(--primary)]`}></div>
 
               <div className="relative z-10 flex justify-between items-start mb-6">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
-                    account.type === 'BANK'
-                      ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
-                      : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                  }`}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center border bg-[var(--primary-light)] border-[var(--primary-light)] text-[var(--primary)]">
                     {account.type === 'BANK' ? <Landmark className="w-5 h-5" /> : <Wallet className="w-5 h-5" />}
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-base leading-tight">
+                    <h3 className="font-bold text-[var(--text-primary)] text-base leading-tight">
                       {account.name}
                     </h3>
-                    <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold block mt-1">
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] font-bold block mt-1">
                       {account.type} ACCOUNT
                     </span>
                   </div>
@@ -212,18 +206,18 @@ export const Accounts: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
                     account.status === 'ACTIVE'
-                      ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
-                      : 'bg-red-500/10 border-red-500/25 text-red-400'
+                      ? 'bg-emerald-50 border-emerald-250 text-emerald-700'
+                      : 'bg-red-55 border-red-250 text-red-750'
                   }`}>
                     {account.status}
                   </span>
                   
                   {isSuperAdmin && (
                     <div className="flex items-center gap-1 ml-2">
-                      <button onClick={() => handleOpenEdit(account)} className="p-1 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors" title="Edit Account">
+                      <button onClick={() => handleOpenEdit(account)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors" title="Edit Account">
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleDeleteAccount(account.id)} className="p-1 rounded hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors" title="Delete Account">
+                      <button onClick={() => handleDeleteAccount(account.id)} className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-650 transition-colors" title="Delete Account">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -233,32 +227,32 @@ export const Accounts: React.FC = () => {
 
               {/* Account Numbers details if BANK */}
               {account.type === 'BANK' ? (
-                <div className="space-y-1 mb-6 text-xs text-gray-400 font-mono">
+                <div className="space-y-1 mb-6 text-xs text-slate-600 font-mono">
                   <p className="flex justify-between">
-                    <span className="text-gray-500">Bank:</span>
+                    <span className="text-slate-400">Bank:</span>
                     <span>{account.bankName}</span>
                   </p>
                   <p className="flex justify-between">
-                    <span className="text-gray-500">A/C No:</span>
+                    <span className="text-slate-400">A/C No:</span>
                     <span>{account.accountNumber}</span>
                   </p>
                   <p className="flex justify-between">
-                    <span className="text-gray-500">IFSC:</span>
+                    <span className="text-slate-400">IFSC:</span>
                     <span>{account.ifsc}</span>
                   </p>
                 </div>
               ) : (
-                <div className="h-[44px] mb-6 flex items-center justify-center text-xs text-gray-600 italic">
+                <div className="h-[44px] mb-6 flex items-center justify-center text-xs text-slate-450 italic">
                   Physical Cash Box / Drawer
                 </div>
               )}
 
               {/* Balances */}
-              <div className="pt-4 border-t border-white/5 flex justify-between items-baseline">
-                <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">
+              <div className="pt-4 border-t border-slate-100 flex justify-between items-baseline">
+                <span className="text-xs text-[var(--text-secondary)] font-bold uppercase tracking-wider">
                   Current Balance
                 </span>
-                <span className="text-xl font-black text-white font-mono">
+                <span className="text-xl font-black text-[var(--text-primary)] font-mono">
                   ₹{account.currentBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -270,16 +264,16 @@ export const Accounts: React.FC = () => {
       {/* Add Account Modal Overlay */}
       {showAddForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl glass-panel-glow border border-white/10 bg-[#090d16] overflow-hidden animate-zoom-in">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xl animate-zoom-in">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <PiggyBank className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-lg font-bold text-white">Create New Account</h3>
+                <PiggyBank className="w-5 h-5 text-[var(--primary)]" />
+                <h3 className="text-lg font-bold text-slate-900">Create New Account</h3>
               </div>
               <button
                 onClick={() => setShowAddForm(false)}
-                className="text-gray-500 hover:text-white transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-650 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -288,7 +282,7 @@ export const Accounts: React.FC = () => {
             {/* Modal Form */}
             <form onSubmit={handleCreateAccount} className="p-6 space-y-4">
               {formError && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-750">
                   {formError}
                 </div>
               )}
@@ -296,14 +290,14 @@ export const Accounts: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 {/* Account Name */}
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-650 mb-2">
                     Account Display Name
                   </label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                     placeholder="e.g. Office Vault Cash"
                     required
                   />
@@ -311,13 +305,13 @@ export const Accounts: React.FC = () => {
 
                 {/* Account Type */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-650 mb-2">
                     Account Type
                   </label>
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                   >
                     <option value="BANK">Bank Account</option>
                     <option value="CASH">Cash Box</option>
@@ -329,7 +323,7 @@ export const Accounts: React.FC = () => {
 
                 {/* Opening Balance */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-650 mb-2">
                     Opening Balance (₹)
                   </label>
                   <input
@@ -337,7 +331,7 @@ export const Accounts: React.FC = () => {
                     step="0.01"
                     value={openingBalance}
                     onChange={(e) => setOpeningBalance(e.target.value)}
-                    className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                     placeholder="0.00"
                     required
                   />
@@ -346,16 +340,16 @@ export const Accounts: React.FC = () => {
 
               {/* Conditional Bank Fields */}
               {type === 'BANK' && (
-                <div className="space-y-4 pt-2 border-t border-white/5 animate-fade-in">
+                <div className="space-y-4 pt-2 border-t border-slate-100 animate-fade-in">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-650 mb-2">
                       Bank Name
                     </label>
                     <input
                       type="text"
                       value={bankName}
                       onChange={(e) => setBankName(e.target.value)}
-                      className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                      className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                       placeholder="e.g. ICICI Bank"
                       required
                     />
@@ -363,28 +357,28 @@ export const Accounts: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-650 mb-2">
                         Account Number
                       </label>
                       <input
                         type="text"
                         value={accountNumber}
                         onChange={(e) => setAccountNumber(e.target.value)}
-                        className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                        className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                         placeholder="12-16 digit code"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-650 mb-2">
                         IFSC Code
                       </label>
                       <input
                         type="text"
                         value={ifsc}
                         onChange={(e) => setIfsc(e.target.value)}
-                        className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                        className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                         placeholder="IFSC Alpha-Numeric"
                         required
                       />
@@ -394,11 +388,11 @@ export const Accounts: React.FC = () => {
               )}
 
               {/* Submit Buttons */}
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-white/5">
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 text-gray-400 text-sm hover:text-white transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm hover:bg-slate-200 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -406,7 +400,7 @@ export const Accounts: React.FC = () => {
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-650 text-white text-sm font-semibold shadow-lg shadow-indigo-500/20 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-semibold shadow-lg shadow-[var(--primary)]/15 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
                 >
                   {formLoading ? 'Creating...' : 'Save Account'}
                 </button>
@@ -419,16 +413,16 @@ export const Accounts: React.FC = () => {
       {/* Edit Account Modal Overlay */}
       {showEditForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm rounded-2xl glass-panel-glow border border-white/10 bg-[#090d16] overflow-hidden animate-zoom-in">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xl animate-zoom-in">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-lg font-bold text-white">Edit Account</h3>
+                <Edit2 className="w-5 h-5 text-[var(--primary)]" />
+                <h3 className="text-lg font-bold text-slate-900">Edit Account</h3>
               </div>
               <button
                 onClick={() => setShowEditForm(false)}
-                className="text-gray-500 hover:text-white transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-655 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -437,32 +431,32 @@ export const Accounts: React.FC = () => {
             {/* Modal Form */}
             <form onSubmit={handleUpdateAccount} className="p-6 space-y-4">
               {formError && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-750">
                   {formError}
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-650 mb-2">
                   Account Display Name
                 </label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                  className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-650 mb-2">
                   Account Status
                 </label>
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value)}
-                  className="block w-full px-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                  className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                 >
                   <option value="ACTIVE">Active</option>
                   <option value="INACTIVE">Inactive</option>
@@ -470,30 +464,30 @@ export const Accounts: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-650 mb-2">
                   Current Balance
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <span className="text-gray-500 text-sm font-semibold">₹</span>
+                    <span className="text-slate-500 text-sm font-semibold">₹</span>
                   </div>
                   <input
                     type="number"
                     step="0.01"
                     value={editBalance}
                     onChange={(e) => setEditBalance(e.target.value)}
-                    className="block w-full pl-8 pr-4 py-2.5 rounded-xl bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm outline-none"
+                    className="block w-full pl-8 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none"
                     required
                   />
                 </div>
               </div>
 
               {/* Submit Buttons */}
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-white/5">
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowEditForm(false)}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 text-gray-400 text-sm hover:text-white transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm hover:bg-slate-200 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -501,7 +495,7 @@ export const Accounts: React.FC = () => {
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-650 text-white text-sm font-semibold shadow-lg shadow-indigo-500/20 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-semibold shadow-lg shadow-[var(--primary)]/15 disabled:opacity-50 active:scale-98 transition-all cursor-pointer"
                 >
                   {formLoading ? 'Saving...' : 'Update'}
                 </button>
