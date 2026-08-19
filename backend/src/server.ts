@@ -1,10 +1,10 @@
 import * as dotenv from 'dotenv';
+dotenv.config();
+
 import app from './app';
 import { prisma } from './config/database';
 import { logger } from './config/logger';
 import { startAutoCheckoutCron } from './jobs/autoCheckout.job';
-
-dotenv.config();
 
 const PORT = process.env.PORT || 5000;
 
