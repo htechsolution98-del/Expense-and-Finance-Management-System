@@ -54,8 +54,20 @@ app.use(limiter);
 // 4. API Endpoints Version 1
 app.use('/api/v1', v1Router);
 
-// 5. Catch-all 404 Route
-app.use((_req: Request, res: Response, _next: NextFunction) => {
+// 5. Serve static frontend in production
+const frontendDistPath = path.join(__dirname, '../../../frontend/dist');
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(frontendDistPath));
+}
+
+// 6. Catch-all 404 / SPA router support
+app.use((req: Request, res: Response, _next: NextFunction) => {
+  if (req.path.startsWith('/api')) {
+    return sendError(res, 'Resource not found', 404, 'NOT_FOUND');
+  }
+  if (process.env.NODE_ENV === 'production') {
+    return res.sendFile(path.join(frontendDistPath, 'index.html'));
+  }
   sendError(res, 'Resource not found', 404, 'NOT_FOUND');
 });
 

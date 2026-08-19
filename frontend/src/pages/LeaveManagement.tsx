@@ -71,7 +71,7 @@ interface LeaveRequest {
   dayType: string;
   reason: string;
   attachment?: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'SUPER_APPROVED';
   appliedAt: string;
   approvedAt?: string;
   approvedBy?: string;

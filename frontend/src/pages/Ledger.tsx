@@ -123,9 +123,9 @@ export const Ledger: React.FC = () => {
 
       const csvContent = "\uFEFF" + [
         headers.join(','),
-        ...rows.map((row) =>
+        ...rows.map((row: string[]) =>
           row
-            .map((value) => {
+            .map((value: string) => {
               const escaped = String(value).replace(/"/g, '""');
               return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"')
                 ? `"${escaped}"`
