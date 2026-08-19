@@ -15,7 +15,10 @@ import {
   CheckCircle2,
   CheckCircle,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Download,
+  Printer,
+  Search
 } from 'lucide-react';
 
 interface Loan {
@@ -54,8 +57,56 @@ interface Transaction {
 export const Loans: React.FC = () => {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Pagination & Filter States
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  const filteredLoans = loans.filter(l => {
+    // 1. Text Search Filter
+    const matchesSearch =
+      l.loanNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      l.lender?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      l.purpose?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    // 2. Date range filter
+    const loanDate = new Date(l.receivedDate);
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      if (loanDate < start) return false;
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      if (loanDate > end) return false;
+    }
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredLoans.length / itemsPerPage);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredLoans.length, totalPages, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, fromDate, toDate]);
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentLoans = filteredLoans.slice(indexOfFirstItem, indexOfLastItem);
 
   // Loan Detail States
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
@@ -95,12 +146,16 @@ export const Loans: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const [loanRes, accRes] = await Promise.all([
+      const [loanRes, accRes, companyRes] = await Promise.all([
         api.get('/masters/loans'),
-        api.get('/accounts')
+        api.get('/accounts'),
+        api.get('/company').catch(() => ({ data: { data: null } }))
       ]);
       setLoans(loanRes.data.data);
       setAccounts(accRes.data.data);
+      if (companyRes?.data?.data) {
+        setCompanyInfo(companyRes.data.data);
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to retrieve loans data.');
     } finally {
@@ -154,6 +209,162 @@ export const Loans: React.FC = () => {
   const totalRepaid = Object.values(loanBalances).reduce((sum, b) => sum + b.repaid, 0);
   const totalUtilized = Object.values(loanBalances).reduce((sum, b) => sum + b.utilized, 0);
   const totalOutstanding = loans.reduce((sum, l) => sum + computeOutstanding(l), 0);
+
+  const handleExportCSV = () => {
+    if (filteredLoans.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    const headers = [
+      'Loan No',
+      'Lender',
+      'Borrow Date',
+      'Principal (INR)',
+      'Interest Rate',
+      'Repaid (INR)',
+      'Outstanding (INR)',
+      'Status',
+      'Purpose'
+    ];
+
+    const rows = filteredLoans.map((l) => {
+      const balance = loanBalances[l.id] || { repaid: 0, utilized: 0 };
+      const outstanding = computeOutstanding(l);
+      return [
+        l.loanNo || '',
+        l.lender || '',
+        new Date(l.receivedDate).toLocaleDateString(),
+        l.principal.toString(),
+        `${l.interestRate}% p.a.`,
+        balance.repaid.toString(),
+        outstanding.toString(),
+        l.status || '',
+        l.purpose || ''
+      ];
+    });
+
+    const csvContent = "\uFEFF" + [
+      headers.join(','),
+      ...rows.map((row) =>
+        row
+          .map((value) => {
+            const escaped = value.replace(/"/g, '""');
+            return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"')
+              ? `"${escaped}"`
+              : escaped;
+          })
+          .join(',')
+      ),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `loans_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    if (filteredLoans.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    const printWindow = window.open('', '', 'width=900,height=800');
+    if (!printWindow) return;
+
+    const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+    const companyNameStr = companyInfo?.name || 'COMPANY NAME';
+    const companyAddressStr = companyInfo?.address || '';
+    const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';
+    const companyEmailStr = companyInfo?.email ? `Email: ${companyInfo.email}` : '';
+    const companyGstinStr = companyInfo?.gstin ? `GSTIN: ${companyInfo.gstin}` : '';
+
+    const tableRows = filteredLoans
+      .map((l) => {
+        const balance = loanBalances[l.id] || { repaid: 0, utilized: 0 };
+        const outstanding = computeOutstanding(l);
+        return `
+          <tr>
+            <td style="font-family: monospace; font-weight: bold; color: #111;">${l.loanNo || ''}</td>
+            <td>${l.lender || ''}</td>
+            <td>${new Date(l.receivedDate).toLocaleDateString()}</td>
+            <td style="text-align: right; font-weight: 600;">₹${l.principal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td style="text-align: right;">${l.interestRate}% p.a.</td>
+            <td style="text-align: right; color: #10b981; font-weight: 600;">₹${balance.repaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td style="text-align: right; color: #d97706; font-weight: 600;">₹${outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td style="text-align: center; font-weight: bold; font-size: 10px;">${l.status || ''}</td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Loans Report - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 30px; color: #333; margin: 0; }
+            .header { border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .title { font-size: 22px; font-weight: 800; text-transform: uppercase; margin: 0; color: #111; }
+            .meta { font-size: 11px; color: #555; font-family: monospace; margin-top: 4px; }
+            .company-info h2 { margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase; }
+            .company-info p { margin: 2px 0; font-size: 11px; color: #555; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+            th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background: #f4f5f7; font-weight: bold; color: #444; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+            tr:hover { background: #f9fafb; }
+            @media print {
+              body { padding: 0; }
+              th { background: #f4f5f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-info">
+              ${companyLogoUrl ? `<img src="${companyLogoUrl}" style="max-height: 50px; margin-bottom: 8px;" />` : ''}
+              <h2>${companyNameStr}</h2>
+              ${companyAddressStr ? `<p>${companyAddressStr}</p>` : ''}
+              <p>${[companyPhoneStr, companyEmailStr, companyGstinStr].filter(Boolean).join(' | ')}</p>
+            </div>
+            <div style="text-align: right;">
+              <div class="title">Loans & Udhaar Ledger Report</div>
+              <div class="meta">Generated on: ${new Date().toLocaleString()}</div>
+              <div class="meta">Date Range: ${fromDate ? new Date(fromDate).toLocaleDateString() : 'All Time'} - ${toDate ? new Date(toDate).toLocaleDateString() : 'All Time'}</div>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Loan No</th>
+                <th>Lender</th>
+                <th>Borrow Date</th>
+                <th style="text-align: right;">Principal</th>
+                <th style="text-align: right;">Rate</th>
+                <th style="text-align: right;">Repaid</th>
+                <th style="text-align: right;">Outstanding</th>
+                <th style="text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
 
   // View loan transactions ledger
   const handleViewHistory = async (loan: Loan) => {
@@ -338,6 +549,79 @@ export const Loans: React.FC = () => {
         </div>
       </div>
 
+      {/* Date Filters & Exports Toolbar */}
+      <div className="p-4 rounded-2xl glass-panel bg-[#0e1420]/30 border border-white/5 flex flex-wrap gap-4 items-center justify-between">
+        <div className="flex flex-wrap gap-4 items-center w-full sm:w-auto">
+          {/* Find/Search input */}
+          <div className="relative flex-1 sm:flex-none">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search by loan no, lender, purpose..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full sm:w-64 rounded-xl bg-[#0e1420]/80 border border-white/5 text-xs text-white placeholder-gray-500 focus:border-indigo-500 outline-none transition-all"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">From:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => {
+                setFromDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 rounded bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 text-white text-xs outline-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">To:</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => {
+                setToDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 rounded bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 text-white text-xs outline-none"
+            />
+          </div>
+
+          {(fromDate || toDate) && (
+            <button
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded transition cursor-pointer"
+            >
+              Clear Dates
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportCSV}
+            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-indigo-600/10"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-rose-600/10"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print PDF</span>
+          </button>
+        </div>
+      </div>
+
       {/* Loans Table */}
       <div className="glass-panel border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
@@ -362,14 +646,16 @@ export const Loans: React.FC = () => {
                     Loading business borrowings...
                   </td>
                 </tr>
-              ) : loans.length === 0 ? (
+              ) : filteredLoans.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                    No active business borrowings registered.
+                    {loans.length === 0
+                      ? "No active business borrowings registered."
+                      : "No business borrowings found for the selected date range."}
                   </td>
                 </tr>
               ) : (
-                loans.map((l) => {
+                currentLoans.map((l) => {
                   const balance = loanBalances[l.id] || { repaid: 0, utilized: 0 };
                   const outstanding = computeOutstanding(l);
 
@@ -483,6 +769,74 @@ export const Loans: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {filteredLoans.length > 0 && (
+          <div className="px-6 py-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0c101a]/40">
+            <div className="text-xs text-gray-400 font-medium">
+              Showing <span className="font-bold text-white">{indexOfFirstItem + 1}</span> to{' '}
+              <span className="font-bold text-white">
+                {Math.min(indexOfLastItem, filteredLoans.length)}
+              </span>{' '}
+              of <span className="font-bold text-white">{filteredLoans.length}</span> loans
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-white/5 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-white disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer bg-[#0e1420]/80"
+                >
+                  Previous
+                </button>
+
+                {/* Render page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => {
+                  const isFirstOrLast = pageNumber === 1 || pageNumber === totalPages;
+                  const isNearCurrent = Math.abs(pageNumber - currentPage) <= 1;
+
+                  if (isFirstOrLast || isNearCurrent) {
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === pageNumber
+                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/15 border-none'
+                            : 'border border-white/5 text-gray-400 hover:bg-white/5 hover:text-white bg-[#0e1420]/80'
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  }
+
+                  if (
+                    (pageNumber === 2 && currentPage > 3) ||
+                    (pageNumber === totalPages - 1 && currentPage < totalPages - 2)
+                  ) {
+                    return (
+                      <span key={pageNumber} className="px-1 text-gray-500 text-xs font-semibold">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  return null;
+                })}
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-white/5 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-white disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer bg-[#0e1420]/80"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* MODAL 1: Record Loan Modal */}

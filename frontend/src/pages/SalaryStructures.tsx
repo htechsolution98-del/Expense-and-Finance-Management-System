@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Plus, RefreshCw, AlertCircle, X, BadgePercent, Download, Printer, Search } from 'lucide-react';
 import { api } from '../services/api';
-import { Plus, RefreshCw, AlertCircle, X, BadgePercent } from 'lucide-react';
 
 interface SalaryStructure {
   id: string;
@@ -23,11 +23,60 @@ interface Employee { id: string; name: string }
 export const SalaryStructures: React.FC = () => {
   const [structures, setStructures] = useState<SalaryStructure[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Pagination & Filter States
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
   const [showUpsertModal, setShowUpsertModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editStructureId, setEditStructureId] = useState('');
+
+  const filteredStructures = structures.filter(s => {
+    // 1. Text Search Filter (checks employee name, employee code, status)
+    const matchesSearch =
+      s.employee?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.employee?.employeeCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.status?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    // 2. Date range filter (checks effectiveDate)
+    const effectiveDateObj = new Date(s.effectiveDate);
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      if (effectiveDateObj < start) return false;
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      if (effectiveDateObj > end) return false;
+    }
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredStructures.length / itemsPerPage);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredStructures.length, totalPages, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, fromDate, toDate]);
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStructures = filteredStructures.slice(indexOfFirstItem, indexOfLastItem);
 
   // Form states
   const [employeeId, setEmployeeId] = useState('');
@@ -52,8 +101,14 @@ export const SalaryStructures: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/salaries/structures');
-      setStructures(response.data.data);
+      const [structRes, companyRes] = await Promise.all([
+        api.get('/salaries/structures'),
+        api.get('/company').catch(() => ({ data: { data: null } }))
+      ]);
+      setStructures(structRes.data.data);
+      if (companyRes?.data?.data) {
+        setCompanyInfo(companyRes.data.data);
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to retrieve salary structures.');
     } finally {
@@ -186,15 +241,183 @@ export const SalaryStructures: React.FC = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    if (filteredStructures.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    const headers = [
+      'Employee Code',
+      'Employee Name',
+      'Effective Date',
+      'Basic (INR)',
+      'HRA (INR)',
+      'Conveyance (INR)',
+      'Medical (INR)',
+      'Special (INR)',
+      'Gross Salary (INR)',
+      'PF Deductions (INR)',
+      'PT Deductions (INR)',
+      'TDS Deductions (INR)',
+      'Net Salary (INR)',
+      'Status'
+    ];
+
+    const rows = filteredStructures.map((s) => {
+      const gross = s.basic + s.hra + s.conveyance + s.medical + s.special;
+      const deductions = s.pf + s.professionalTax + s.tds;
+      const net = gross - deductions;
+
+      return [
+        s.employee?.employeeCode || '',
+        s.employee?.name || '',
+        new Date(s.effectiveDate).toLocaleDateString(),
+        s.basic.toString(),
+        s.hra.toString(),
+        s.conveyance.toString(),
+        s.medical.toString(),
+        s.special.toString(),
+        gross.toString(),
+        s.pf.toString(),
+        s.professionalTax.toString(),
+        s.tds.toString(),
+        net.toString(),
+        s.status || ''
+      ];
+    });
+
+    const csvContent = "\uFEFF" + [
+      headers.join(','),
+      ...rows.map((row) =>
+        row
+          .map((value) => {
+            const escaped = value.replace(/"/g, '""');
+            return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"')
+              ? `"${escaped}"`
+              : escaped;
+          })
+          .join(',')
+      ),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `salary_structures_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    if (filteredStructures.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    const printWindow = window.open('', '', 'width=900,height=800');
+    if (!printWindow) return;
+
+    const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+    const companyNameStr = companyInfo?.name || 'COMPANY NAME';
+    const companyAddressStr = companyInfo?.address || '';
+    const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';
+    const companyEmailStr = companyInfo?.email ? `Email: ${companyInfo.email}` : '';
+    const companyGstinStr = companyInfo?.gstin ? `GSTIN: ${companyInfo.gstin}` : '';
+
+    const tableRows = filteredStructures
+      .map((s) => {
+        const gross = s.basic + s.hra + s.conveyance + s.medical + s.special;
+        const deductions = s.pf + s.professionalTax + s.tds;
+        const net = gross - deductions;
+
+        return `
+          <tr>
+            <td style="font-family: monospace; font-weight: bold; color: #111;">${s.employee?.employeeCode || ''}</td>
+            <td>${s.employee?.name || ''}</td>
+            <td>${new Date(s.effectiveDate).toLocaleDateString()}</td>
+            <td style="text-align: right;">₹${gross.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td style="text-align: right; color: #ef4444;">₹${deductions.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td style="text-align: right; font-weight: 600; color: #10b981;">₹${net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td style="text-align: center; font-weight: bold; font-size: 10px;">${s.status || ''}</td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Salary Structures Report - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 30px; color: #333; margin: 0; }
+            .header { border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .title { font-size: 22px; font-weight: 800; text-transform: uppercase; margin: 0; color: #111; }
+            .meta { font-size: 11px; color: #555; font-family: monospace; margin-top: 4px; }
+            .company-info h2 { margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase; }
+            .company-info p { margin: 2px 0; font-size: 11px; color: #555; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+            th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background: #f4f5f7; font-weight: bold; color: #444; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+            tr:hover { background: #f9fafb; }
+            @media print {
+              body { padding: 0; }
+              th { background: #f4f5f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-info">
+              ${companyLogoUrl ? `<img src="${companyLogoUrl}" style="max-height: 50px; margin-bottom: 8px;" />` : ''}
+              <h2>${companyNameStr}</h2>
+              ${companyAddressStr ? `<p>${companyAddressStr}</p>` : ''}
+              <p>${[companyPhoneStr, companyEmailStr, companyGstinStr].filter(Boolean).join(' | ')}</p>
+            </div>
+            <div style="text-align: right;">
+              <div class="title">Salary Structures Report</div>
+              <div class="meta">Generated on: ${new Date().toLocaleString()}</div>
+              <div class="meta">Date Range: ${fromDate ? new Date(fromDate).toLocaleDateString() : 'All Time'} - ${toDate ? new Date(toDate).toLocaleDateString() : 'All Time'}</div>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Emp Code</th>
+                <th>Employee Name</th>
+                <th>Effective Date</th>
+                <th style="text-align: right;">Gross Monthly</th>
+                <th style="text-align: right;">Deductions</th>
+                <th style="text-align: right;">Net Monthly</th>
+                <th style="text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header section */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
             Salary Structures
           </h1>
-          <p className="text-gray-400 mt-1.5 text-sm">
+          <p className="text-slate-500 mt-1.5 text-sm">
             Define allowances and deduction parameters mapped to staff payroll items.
           </p>
         </div>
@@ -203,7 +426,7 @@ export const SalaryStructures: React.FC = () => {
           <button
             onClick={fetchStructures}
             disabled={loading}
-            className="p-3 rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+            className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-900 transition-all cursor-pointer disabled:opacity-50"
             title="Refresh List"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -215,6 +438,81 @@ export const SalaryStructures: React.FC = () => {
           >
             <Plus className="w-4 h-4" />
             <span>Configure Salary</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Date Filters & Exports Toolbar */}
+      <div className="p-4 rounded-2xl bg-white border border-slate-200 flex flex-wrap gap-4 items-center justify-between shadow-sm">
+        <div className="flex flex-wrap gap-4 items-center w-full sm:w-auto">
+          {/* Find/Search input */}
+          <div className="relative flex-1 sm:flex-none">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search by employee name, code..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full sm:w-64 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-500 outline-none transition-all"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-500 whitespace-nowrap">From:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => {
+                setFromDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:border-indigo-500 outline-none transition-all"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-500 whitespace-nowrap">To:</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => {
+                setToDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:border-indigo-500 outline-none transition-all"
+            />
+          </div>
+
+          {(fromDate || toDate) && (
+            <button
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition cursor-pointer"
+            >
+              Clear Dates
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+            title="Export filtered structures to CSV"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+            title="Print filtered structures to PDF"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print PDF</span>
           </button>
         </div>
       </div>
@@ -248,14 +546,16 @@ export const SalaryStructures: React.FC = () => {
                     <td colSpan={isSuperAdmin ? 7 : 6} className="h-16 bg-white/2"></td>
                   </tr>
                 ))
-              ) : structures.length === 0 ? (
+              ) : filteredStructures.length === 0 ? (
                 <tr>
-                  <td colSpan={isSuperAdmin ? 7 : 6} className="px-6 py-12 text-center text-gray-500 font-semibold italic">
-                    No active salary configurations registered.
+                  <td colSpan={isSuperAdmin ? 7 : 6} className="px-6 py-12 text-center text-slate-500 font-semibold italic bg-white">
+                    {structures.length === 0
+                      ? "No active salary configurations registered."
+                      : "No salary structures found matching filters."}
                   </td>
                 </tr>
               ) : (
-                structures.map((struct) => {
+                currentStructures.map((struct) => {
                   const gross = struct.basic + struct.hra + struct.conveyance + struct.medical + struct.special;
                   const deductions = struct.pf + struct.professionalTax + struct.tds;
                   const net = gross - deductions;
@@ -353,6 +653,74 @@ export const SalaryStructures: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {filteredStructures.length > 0 && (
+          <div className="px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50">
+            <div className="text-xs text-slate-500 font-medium">
+              Showing <span className="font-bold text-slate-800">{indexOfFirstItem + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">
+                {Math.min(indexOfLastItem, filteredStructures.length)}
+              </span>{' '}
+              of <span className="font-bold text-slate-800">{filteredStructures.length}</span> configurations
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer bg-white"
+                >
+                  Previous
+                </button>
+
+                {/* Render page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => {
+                  const isFirstOrLast = pageNumber === 1 || pageNumber === totalPages;
+                  const isNearCurrent = Math.abs(pageNumber - currentPage) <= 1;
+
+                  if (isFirstOrLast || isNearCurrent) {
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === pageNumber
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/15 border-none'
+                            : 'border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 bg-white'
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  }
+
+                  if (
+                    (pageNumber === 2 && currentPage > 3) ||
+                    (pageNumber === totalPages - 1 && currentPage < totalPages - 2)
+                  ) {
+                    return (
+                      <span key={pageNumber} className="px-1 text-slate-400 text-xs font-semibold">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  return null;
+                })}
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer bg-white"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Configure Salary Modal */}

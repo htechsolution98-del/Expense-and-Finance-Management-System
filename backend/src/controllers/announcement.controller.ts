@@ -31,9 +31,8 @@ export const getAnnouncements = async (
     const companyId = req.companyId!;
     const user = req.user!;
 
-    // Check if the user has management permissions
+    // Check if the user has management permissions (SUPER_ADMIN only)
     const canManage =
-      user.permissions.includes('ANNOUNCEMENT_CREATE') ||
       user.permissions.includes('*') ||
       user.role === 'SUPER_ADMIN';
 

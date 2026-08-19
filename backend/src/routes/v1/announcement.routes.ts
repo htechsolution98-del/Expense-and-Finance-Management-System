@@ -15,8 +15,8 @@ router.use(authenticate);
 router.use(tenantScopeMiddleware);
 
 router.get('/', authorize('ANNOUNCEMENT_VIEW'), getAnnouncements);
-router.post('/', authorize('ANNOUNCEMENT_CREATE'), createAnnouncement);
-router.put('/:id', authorize('ANNOUNCEMENT_CREATE'), updateAnnouncement);
-router.delete('/:id', authorize('ANNOUNCEMENT_CREATE'), deleteAnnouncement);
+router.post('/', authorize('SUPER_ADMIN_ONLY'), createAnnouncement);
+router.put('/:id', authorize('SUPER_ADMIN_ONLY'), updateAnnouncement);
+router.delete('/:id', authorize('SUPER_ADMIN_ONLY'), deleteAnnouncement);
 
 export default router;

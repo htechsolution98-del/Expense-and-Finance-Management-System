@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { api } from '../services/api';
-import { RefreshCw, Filter, ShieldAlert, Ban, X, AlertCircle } from 'lucide-react';
+import { RefreshCw, Filter, ShieldAlert, Ban, X, AlertCircle, Download, Printer } from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -32,10 +32,13 @@ export const Ledger: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [accountFilter, setAccountFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [categoriesList, setCategoriesList] = useState<{ id: string, name: string }[]>([]);
   const [accountsList, setAccountsList] = useState<{ id: string, name: string }[]>([]);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
 
   // Reversal States
   const [showReverseModal, setShowReverseModal] = useState(false);
@@ -55,10 +58,12 @@ export const Ledger: React.FC = () => {
     try {
       const params = {
         page,
-        limit: 15,
+        limit: 10,
         ...(typeFilter && { type: typeFilter }),
         ...(categoryFilter && { category: categoryFilter }),
         ...(accountFilter && { accountId: accountFilter }),
+        ...(fromDate && { startDate: fromDate }),
+        ...(toDate && { endDate: toDate }),
       };
 
       const response = await api.get('/ledger', { params });
@@ -71,15 +76,199 @@ export const Ledger: React.FC = () => {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const params = {
+        limit: 100000,
+        ...(typeFilter && { type: typeFilter }),
+        ...(categoryFilter && { category: categoryFilter }),
+        ...(accountFilter && { accountId: accountFilter }),
+        ...(fromDate && { startDate: fromDate }),
+        ...(toDate && { endDate: toDate }),
+      };
+
+      const response = await api.get('/ledger', { params });
+      const records = response.data.data || [];
+
+      if (records.length === 0) {
+        alert('No data to export.');
+        return;
+      }
+
+      const headers = [
+        'Transaction No',
+        'Voucher No',
+        'Date',
+        'Account',
+        'Details & Target',
+        'Type',
+        'Category',
+        'Payment Mode',
+        'Amount (INR)',
+        'Reference No'
+      ];
+
+      const rows = records.map((t: any) => [
+        t.transactionNo || '',
+        t.voucherNo || '',
+        new Date(t.date).toLocaleString(),
+        t.accountName || '',
+        `${t.purpose || ''} (Party: ${t.partyName || ''})`,
+        t.type || '',
+        t.category || '',
+        t.paymentMode || '',
+        t.amount.toString(),
+        t.referenceNo || '',
+      ]);
+
+      const csvContent = "\uFEFF" + [
+        headers.join(','),
+        ...rows.map((row) =>
+          row
+            .map((value) => {
+              const escaped = String(value).replace(/"/g, '""');
+              return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"')
+                ? `"${escaped}"`
+                : escaped;
+            })
+            .join(',')
+        ),
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `ledger_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to export ledger data.');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const params = {
+        limit: 100000,
+        ...(typeFilter && { type: typeFilter }),
+        ...(categoryFilter && { category: categoryFilter }),
+        ...(accountFilter && { accountId: accountFilter }),
+        ...(fromDate && { startDate: fromDate }),
+        ...(toDate && { endDate: toDate }),
+      };
+
+      const response = await api.get('/ledger', { params });
+      const records = response.data.data || [];
+
+      if (records.length === 0) {
+        alert('No data to export.');
+        return;
+      }
+
+      const printWindow = window.open('', '', 'width=900,height=800');
+      if (!printWindow) return;
+
+      const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+      const companyNameStr = companyInfo?.name || 'COMPANY NAME';
+      const companyAddressStr = companyInfo?.address || '';
+      const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';
+      const companyEmailStr = companyInfo?.email ? `Email: ${companyInfo.email}` : '';
+      const companyGstinStr = companyInfo?.gstin ? `GSTIN: ${companyInfo.gstin}` : '';
+
+      const tableRows = records
+        .map((t: any) => `
+          <tr>
+            <td style="font-family: monospace; font-weight: bold; color: #111;">${t.transactionNo || ''}</td>
+            <td>${new Date(t.date).toLocaleDateString()}</td>
+            <td>${t.accountName || ''}</td>
+            <td>
+              <div style="font-weight: 600; color: #111;">${t.purpose || ''}</div>
+              <div style="font-size: 10px; color: #666; margin-top: 2px;">Party: ${t.partyName || ''} | Category: ${t.category || ''}</div>
+            </td>
+            <td>${t.paymentMode || ''}</td>
+            <td style="text-align: right; font-weight: bold; color: ${t.type === 'PAYMENT_IN' ? '#10b981' : '#ef4444'}">
+              ${t.type === 'PAYMENT_IN' ? `+₹${t.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : `-₹${t.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+            </td>
+          </tr>
+        `)
+        .join('');
+
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Ledger Statement - ${new Date().toLocaleDateString()}</title>
+            <style>
+              body { font-family: 'Inter', sans-serif; padding: 30px; color: #333; margin: 0; }
+              .header { border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+              .title { font-size: 22px; font-weight: 800; text-transform: uppercase; margin: 0; color: #111; }
+              .meta { font-size: 11px; color: #555; font-family: monospace; margin-top: 4px; }
+              .company-info h2 { margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase; }
+              .company-info p { margin: 2px 0; font-size: 11px; color: #555; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+              th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+              th { background: #f4f5f7; font-weight: bold; color: #444; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+              tr:hover { background: #f9fafb; }
+              @media print {
+                body { padding: 0; }
+                th { background: #f4f5f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="company-info">
+                ${companyLogoUrl ? `<img src="${companyLogoUrl}" style="max-height: 50px; margin-bottom: 8px;" />` : ''}
+                <h2>${companyNameStr}</h2>
+                ${companyAddressStr ? `<p>${companyAddressStr}</p>` : ''}
+                <p>${[companyPhoneStr, companyEmailStr, companyGstinStr].filter(Boolean).join(' | ')}</p>
+              </div>
+              <div style="text-align: right;">
+                <div class="title">Ledger Statement</div>
+                <div class="meta">Generated on: ${new Date().toLocaleString()}</div>
+                <div class="meta">Date Range: ${fromDate ? new Date(fromDate).toLocaleDateString() : 'All Time'} - ${toDate ? new Date(toDate).toLocaleDateString() : 'All Time'}</div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Txn No</th>
+                  <th>Date</th>
+                  <th>Account</th>
+                  <th>Details</th>
+                  <th>Mode</th>
+                  <th style="text-align: right;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRows}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to export ledger PDF.');
+    }
+  };
+
   useEffect(() => {
     fetchTransactions();
-  }, [page, typeFilter, categoryFilter, accountFilter]);
+  }, [page, typeFilter, categoryFilter, accountFilter, fromDate, toDate]);
 
   // Auto-refresh transactions every 30s
-  useAutoRefresh(fetchTransactions, 30000, [page, typeFilter, categoryFilter, accountFilter]);
+  useAutoRefresh(fetchTransactions, 30000, [page, typeFilter, categoryFilter, accountFilter, fromDate, toDate]);
 
 
   useEffect(() => {
+    api.get('/company').then(res => setCompanyInfo(res.data.data)).catch(console.error);
     api.get('/payment-categories').then(res => setCategoriesList(res.data.data || [])).catch(console.error);
     api.get('/accounts').then(res => setAccountsList(res.data.data || [])).catch(console.error);
   }, []);
@@ -208,10 +397,67 @@ export const Ledger: React.FC = () => {
             <option value="SALARY_PAYMENT">Salaries (System)</option>
             <option value="OTHER">Other Categories (System)</option>
           </select>
+
+          {/* From Date Filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">From:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => {
+                setFromDate(e.target.value);
+                setPage(1);
+              }}
+              className="px-2 py-1 rounded bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 text-white text-xs outline-none"
+            />
+          </div>
+
+          {/* To Date Filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">To:</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => {
+                setToDate(e.target.value);
+                setPage(1);
+              }}
+              className="px-2 py-1 rounded bg-[#0e1420]/80 border border-white/5 focus:border-indigo-500 text-white text-xs outline-none"
+            />
+          </div>
+
+          {(fromDate || toDate) && (
+            <button
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+                setPage(1);
+              }}
+              className="px-2 py-1 text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded transition cursor-pointer"
+            >
+              Clear Dates
+            </button>
+          )}
         </div>
 
-        <div className="text-xs text-gray-500 font-semibold font-mono">
-          Page {page} of {totalPages}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleExportCSV}
+            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-indigo-600/10"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-rose-600/10"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print PDF</span>
+          </button>
+          <div className="text-xs text-gray-500 font-semibold font-mono">
+            Page {page} of {totalPages}
+          </div>
         </div>
       </div>
 

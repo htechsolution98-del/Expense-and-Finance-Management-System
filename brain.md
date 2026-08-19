@@ -517,16 +517,31 @@ Standardized the entire UI color system (light SaaS theme) and resolved multiple
 ### ✅ Phase 22 — Company Announcements Module `[COMPLETE]`
 
 **Overview:**
-Implemented a robust and premium Company Announcements Module. Admins can broadcast important updates targeted at specific roles or company-wide, and standard employees can view them on their dashboards and a dedicated announcements bulletin.
+Implemented a robust and premium Company Announcements Module. Super Admins can broadcast important updates targeted at specific roles or company-wide, and standard employees/managers can view them on their dashboards and a dedicated announcements bulletin.
 
 **Key Technical Details:**
 - **Database Model:** Created the `Announcement` model in `schema.prisma` with title, content, status (`DRAFT`, `ACTIVE`, `ARCHIVED`), targetRoles, expiresAt, and creator mappings.
-- **Granular Permissions:** Seeded `ANNOUNCEMENT_VIEW` and `ANNOUNCEMENT_CREATE` permissions in the database and mapped standard roles (ADMIN/SUPER_ADMIN can manage, STAFF/ACCOUNTS can view).
-- **Backend APIs:** Built 4 endpoints `/api/v1/announcements` supporting creation, dynamic role filtering, status handling, expiration bounds, and detailed change audit logs.
-- **Frontend Directory & Router:** Created `Announcements.tsx` featuring grid notice boards, creation/editing dialog forms, role targeting checklist inputs, and registered the protected route.
+- **Granular Permissions:** Seeded `ANNOUNCEMENT_VIEW` permission across all system roles. Enforced backend `SUPER_ADMIN_ONLY` route filters and restricted creation, editing, and deletion capabilities strictly to the `SUPER_ADMIN` role.
+- **Backend APIs:** Built 4 endpoints `/api/v1/announcements` supporting creation (restricted), dynamic role filtering, status handling, expiration bounds, and detailed change audit logs.
+- **Frontend Directory & Router:** Created `Announcements.tsx` featuring grid notice boards, creation/editing dialog forms (only rendered for Super Admins), role targeting checklist inputs, and registered the protected route.
 - **Welcome Banner Widget:** Configured `Dashboard.tsx` to query and highlight the latest active company announcement on both employee self-service and executive overview panels.
 
 **Verified:** Automated integration test suite passed (`scratch/run_announcement_tests.ts`). Both frontend and backend TypeScript compilation checked clean with zero errors (`npx tsc --noEmit`).
+
+---
+
+### ✅ Phase 23 — Interactive Table Controls & Data Exporting (Excel/CSV/PDF) `[COMPLETE]`
+
+**Overview:**
+Implemented client-side pagination (10 items per page) on Expenses, Vouchers, Loans, and Salaries tables, added search capabilities and date-range filters across key tables, and developed standard CSV and print-friendly PDF document exports.
+
+**Key Technical Details:**
+- **Table Pagination**: Added sliced pagination arrays, dynamic page clamp limits, and paginated navigation footer indicators inside `ExpensesList.tsx`, `Vouchers.tsx`, `Loans.tsx`, and `SalaryStructures.tsx`.
+- **Filters Panel**: Integrated "From Date" and "To Date" datepickers in Vouchers, Expenses, Ledger Registry, Business Loans, and Salaries. Incorporated Search query inputs inside Expenses (searches by number, employee, purpose, or category), Loans (searches by loan number, lender name, or purpose), and Salaries (searches by employee name, code, or status).
+- **Data Exporting**: Implemented client-side CSV exporters compiling active filtered rows, escaping special characters, and prefixing a UTF-8 BOM (`\uFEFF`) to preserve rupee symbols (`₹`) in Microsoft Excel.
+- **Statement Printing**: Built a print statement generation system (`handleExportPDF`) inside `Ledger.tsx`, `ExpensesList.tsx`, `Vouchers.tsx`, `Loans.tsx`, and `SalaryStructures.tsx` that fetches company profile metadata and formats a styled HTML statement with dynamic transaction tables to save/print as PDF.
+
+**Verified:** Compiled frontend and backend cleanly with 0 TypeScript compilation errors (`npx tsc --noEmit`).
 
 ---
 

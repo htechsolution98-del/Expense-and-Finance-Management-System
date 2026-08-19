@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { 
-  Plus, Receipt, RefreshCw, Wallet, AlertCircle, X, Shield, Clock, Trash2, Edit
+  Plus, Receipt, RefreshCw, Wallet, AlertCircle, X, Shield, Clock, Trash2, Edit, Download, Search, Printer
 } from 'lucide-react';
 
 interface Expense {
@@ -49,6 +49,55 @@ export const ExpensesList: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Pagination & Filter states & logic
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
+
+  const filteredExpenses = expenses.filter(exp => {
+    // 1. Text Search Filter
+    const matchesSearch = 
+      exp.expenseNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exp.employee?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exp.category?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exp.purpose?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    // 2. Date range filter
+    const expenseDate = new Date(exp.date);
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      if (expenseDate < start) return false;
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      if (expenseDate > end) return false;
+    }
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredExpenses.length, totalPages, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, fromDate, toDate]);
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentExpenses = filteredExpenses.slice(indexOfFirstItem, indexOfLastItem);
 
   // Modals and selections
   const [showAddModal, setShowAddModal] = useState(false);
@@ -109,6 +158,7 @@ export const ExpensesList: React.FC = () => {
 
   const fetchMetadata = async () => {
     try {
+      api.get('/company').then(res => setCompanyInfo(res.data.data)).catch(console.error);
       const [catRes, empRes] = await Promise.all([
         api.get('/expenses/categories').catch(() => ({ data: { data: [] } })),
         api.get('/masters/employees').catch(() => ({ data: { data: [] } })),
@@ -274,6 +324,144 @@ export const ExpensesList: React.FC = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    if (filteredExpenses.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    const headers = ['Expense No', 'Employee', 'Category', 'Date', 'Purpose', 'Amount (INR)', 'Status'];
+    const rows = filteredExpenses.map((exp) => [
+      exp.expenseNo || '',
+      exp.employee?.name || '',
+      exp.category?.name || '',
+      new Date(exp.date).toLocaleDateString(),
+      exp.purpose || '',
+      exp.amount.toString(),
+      exp.status || '',
+    ]);
+
+    const csvContent = "\uFEFF" + [
+      headers.join(','),
+      ...rows.map((row) =>
+        row
+          .map((value) => {
+            const escaped = value.replace(/"/g, '""');
+            return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"')
+              ? `"${escaped}"`
+              : escaped;
+          })
+          .join(',')
+      ),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `expenses_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    if (filteredExpenses.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    const printWindow = window.open('', '', 'width=900,height=800');
+    if (!printWindow) return;
+
+    const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+    const companyNameStr = companyInfo?.name || 'COMPANY NAME';
+    const companyAddressStr = companyInfo?.address || '';
+    const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';
+    const companyEmailStr = companyInfo?.email ? `Email: ${companyInfo.email}` : '';
+    const companyGstinStr = companyInfo?.gstin ? `GSTIN: ${companyInfo.gstin}` : '';
+
+    const tableRows = filteredExpenses
+      .map((exp) => `
+        <tr>
+          <td style="font-family: monospace; font-weight: bold; color: #111;">${exp.expenseNo || ''}</td>
+          <td>${exp.employee?.name || ''}</td>
+          <td>
+            <div style="font-weight: 600; color: #111;">${exp.category?.name || ''}</div>
+            <div style="font-size: 10px; color: #666; margin-top: 2px;">Date: ${new Date(exp.date).toLocaleDateString()}</div>
+          </td>
+          <td>${exp.purpose || ''}</td>
+          <td style="text-align: right; font-weight: bold; color: #111;">
+            ₹${exp.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          </td>
+          <td style="text-align: center; font-weight: bold; font-size: 10px;">
+            ${exp.status || ''}
+          </td>
+        </tr>
+      `)
+      .join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Expenses Report - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 30px; color: #333; margin: 0; }
+            .header { border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .title { font-size: 22px; font-weight: 800; text-transform: uppercase; margin: 0; color: #111; }
+            .meta { font-size: 11px; color: #555; font-family: monospace; margin-top: 4px; }
+            .company-info h2 { margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase; }
+            .company-info p { margin: 2px 0; font-size: 11px; color: #555; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+            th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background: #f4f5f7; font-weight: bold; color: #444; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+            tr:hover { background: #f9fafb; }
+            @media print {
+              body { padding: 0; }
+              th { background: #f4f5f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-info">
+              ${companyLogoUrl ? `<img src="${companyLogoUrl}" style="max-height: 50px; margin-bottom: 8px;" />` : ''}
+              <h2>${companyNameStr}</h2>
+              ${companyAddressStr ? `<p>${companyAddressStr}</p>` : ''}
+              <p>${[companyPhoneStr, companyEmailStr, companyGstinStr].filter(Boolean).join(' | ')}</p>
+            </div>
+            <div style="text-align: right;">
+              <div class="title">Expenses Report</div>
+              <div class="meta">Generated on: ${new Date().toLocaleString()}</div>
+              <div class="meta">Date Range: ${fromDate ? new Date(fromDate).toLocaleDateString() : 'All Time'} - ${toDate ? new Date(toDate).toLocaleDateString() : 'All Time'}</div>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Expense No</th>
+                <th>Employee</th>
+                <th>Category</th>
+                <th>Purpose</th>
+                <th style="text-align: right;">Amount</th>
+                <th style="text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   const handleWorkflowAction = async (action: 'approve' | 'reject' | 'return') => {
     if (!selectedExpense) return;
     setActionError('');
@@ -427,6 +615,67 @@ export const ExpensesList: React.FC = () => {
         </div>
       )}
 
+      {/* Date Filters, Search & Export */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm w-full">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by expense no, employee name, purpose, or category..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]/20 text-slate-900 placeholder-slate-400 outline-none transition-all text-xs"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-[var(--text-secondary)] whitespace-nowrap">From:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:border-[var(--primary)] outline-none transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-[var(--text-secondary)] whitespace-nowrap">To:</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:border-[var(--primary)] outline-none transition-all"
+            />
+          </div>
+          {(fromDate || toDate) && (
+            <button
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+              }}
+              className="px-3 py-2.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition cursor-pointer"
+            >
+              Clear Dates
+            </button>
+          )}
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+            title="Export filtered expenses to CSV"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+            title="Print filtered expenses to PDF"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print PDF</span>
+          </button>
+        </div>
+      </div>
+
       {/* Main layout: Grid of list + review side detail sheet */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Expenses List */}
@@ -452,14 +701,16 @@ export const ExpensesList: React.FC = () => {
                       <td colSpan={6} className="h-16 bg-white/2"></td>
                     </tr>
                   ))
-                ) : expenses.length === 0 ? (
+                ) : filteredExpenses.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-gray-500 font-semibold italic">
-                      No expense claims registered in this company.
+                      {expenses.length === 0 
+                        ? "No expense claims registered in this company." 
+                        : "No expenses found for the selected date range."}
                     </td>
                   </tr>
                 ) : (
-                  expenses.map((exp) => (
+                  currentExpenses.map((exp) => (
                     <tr
                       key={exp.id}
                       onClick={() => setSelectedExpense(exp)}
@@ -505,6 +756,76 @@ export const ExpensesList: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {filteredExpenses.length > 0 && (
+            <div className="px-6 py-4 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50">
+              <div className="text-xs text-[var(--text-secondary)] font-medium">
+                Showing <span className="font-bold text-[var(--text-primary)]">{indexOfFirstItem + 1}</span> to{' '}
+                <span className="font-bold text-[var(--text-primary)]">
+                  {Math.min(indexOfLastItem, filteredExpenses.length)}
+                </span>{' '}
+                of <span className="font-bold text-[var(--text-primary)]">{filteredExpenses.length}</span> expenses
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-slate-100 hover:text-[var(--text-primary)] disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer bg-white"
+                  >
+                    Previous
+                  </button>
+
+                  {/* Render page numbers */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => {
+                    // Show first, last, current, and pages around current
+                    const isFirstOrLast = pageNumber === 1 || pageNumber === totalPages;
+                    const isNearCurrent = Math.abs(pageNumber - currentPage) <= 1;
+
+                    if (isFirstOrLast || isNearCurrent) {
+                      return (
+                        <button
+                          key={pageNumber}
+                          onClick={() => setCurrentPage(pageNumber)}
+                          className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            currentPage === pageNumber
+                              ? 'bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/15 border-none'
+                              : 'border border-[var(--border)] text-[var(--text-secondary)] hover:bg-slate-100 hover:text-[var(--text-primary)] bg-white'
+                          }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      );
+                    }
+
+                    // Show ellipses for gaps
+                    if (
+                      (pageNumber === 2 && currentPage > 3) ||
+                      (pageNumber === totalPages - 1 && currentPage < totalPages - 2)
+                    ) {
+                      return (
+                        <span key={pageNumber} className="px-1 text-[var(--text-muted)] text-xs font-semibold">
+                          ...
+                        </span>
+                      );
+                    }
+
+                    return null;
+                  })}
+
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-slate-100 hover:text-[var(--text-primary)] disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer bg-white"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Side Workflow review sheet */}

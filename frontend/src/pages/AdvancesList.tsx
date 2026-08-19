@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { Download, Printer, Search } from 'lucide-react';
 import '../styles/advances.css';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -100,9 +101,59 @@ export default function AdvancesList() {
   const [employees, setEmployees]        = useState<Employee[]>([]);
   const [accounts, setAccounts]          = useState<Account[]>([]);
   const [categories, setCategories]      = useState<ExpenseCategory[]>([]);
+  const [companyInfo, setCompanyInfo]    = useState<any>(null);
   const [loading, setLoading]            = useState(true);
   const [error, setError]                = useState('');
   const [selected, setSelected]          = useState<Advance | null>(null);
+
+  // Pagination & Filter States
+  const [currentPage, setCurrentPage]    = useState(1);
+  const itemsPerPage                     = 10;
+  const [searchTerm, setSearchTerm]      = useState('');
+  const [fromDate, setFromDate]          = useState('');
+  const [toDate, setToDate]              = useState('');
+
+  const filteredAdvances = advances.filter(a => {
+    // 1. Text Search Filter (checks employee name, employee code, advanceNo, purpose, status)
+    const matchesSearch =
+      a.employee?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.employee?.employeeCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.advanceNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.purpose?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.status?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    // 2. Date range filter (checks dateNeeded)
+    const dateNeededObj = new Date(a.dateNeeded);
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      if (dateNeededObj < start) return false;
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      if (dateNeededObj > end) return false;
+    }
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredAdvances.length / itemsPerPage);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredAdvances.length, totalPages, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, fromDate, toDate]);
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentAdvances = filteredAdvances.slice(indexOfFirstItem, indexOfLastItem);
 
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const isAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN' || currentUser.role === 'ACCOUNTS' || currentUser.role?.startsWith('ADMIN') || currentUser.role?.startsWith('ACCOUNT');
@@ -155,16 +206,20 @@ export default function AdvancesList() {
   const loadAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [advRes, empRes, accRes, catRes] = await Promise.all([
+      const [advRes, empRes, accRes, catRes, companyRes] = await Promise.all([
         api.get('/advances'),
         api.get('/masters/employees').catch(() => ({ data: { data: [] } })),
         api.get('/accounts').catch(() => ({ data: { data: [] } })),
         api.get('/expenses/categories').catch(() => ({ data: { data: [] } })),
+        api.get('/company').catch(() => ({ data: { data: null } })),
       ]);
       setAdvances(advRes.data.data || []);
       setEmployees(empRes.data.data || []);
       setAccounts(accRes.data.data || []);
       setCategories(catRes.data.data || []);
+      if (companyRes?.data?.data) {
+        setCompanyInfo(companyRes.data.data);
+      }
     } catch {
       setError('Failed to load advances.');
     } finally {
@@ -319,6 +374,156 @@ export default function AdvancesList() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (filteredAdvances.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    const headers = [
+      'Advance No',
+      'Employee Code',
+      'Employee Name',
+      'Amount (INR)',
+      'Purpose',
+      'Date Needed',
+      'Status',
+      'Outstanding (INR)'
+    ];
+
+    const rows = filteredAdvances.map((a) => {
+      return [
+        a.advanceNo || '',
+        a.employee?.employeeCode || '',
+        a.employee?.name || '',
+        a.amount.toString(),
+        a.purpose || '',
+        new Date(a.dateNeeded).toLocaleDateString(),
+        a.status || '',
+        a.outstandingAmount.toString()
+      ];
+    });
+
+    const csvContent = "\uFEFF" + [
+      headers.join(','),
+      ...rows.map((row) =>
+        row
+          .map((value) => {
+            const escaped = value.replace(/"/g, '""');
+            return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"')
+              ? `"${escaped}"`
+              : escaped;
+          })
+          .join(',')
+      ),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `staff_advances_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    if (filteredAdvances.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    const printWindow = window.open('', '', 'width=900,height=800');
+    if (!printWindow) return;
+
+    const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+    const companyNameStr = companyInfo?.name || 'COMPANY NAME';
+    const companyAddressStr = companyInfo?.address || '';
+    const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';
+    const companyEmailStr = companyInfo?.email ? `Email: ${companyInfo.email}` : '';
+    const companyGstinStr = companyInfo?.gstin ? `GSTIN: ${companyInfo.gstin}` : '';
+
+    const tableRows = filteredAdvances
+      .map((a) => {
+        return `
+          <tr>
+            <td style="font-family: monospace; font-weight: bold; color: #111;">${a.advanceNo || ''}</td>
+            <td>${a.employee?.name || ''}</td>
+            <td style="font-family: monospace; font-size: 11px;">${a.employee?.employeeCode || ''}</td>
+            <td style="text-align: right; font-weight: 600;">₹${a.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td>${a.purpose || ''}</td>
+            <td>${new Date(a.dateNeeded).toLocaleDateString()}</td>
+            <td style="text-align: center; font-weight: bold; font-size: 10px;">${a.status || ''}</td>
+            <td style="text-align: right; color: #ef4444; font-weight: 600;">₹${a.outstandingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Staff Advances Statement - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 30px; color: #333; margin: 0; }
+            .header { border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .title { font-size: 22px; font-weight: 800; text-transform: uppercase; margin: 0; color: #111; }
+            .meta { font-size: 11px; color: #555; font-family: monospace; margin-top: 4px; }
+            .company-info h2 { margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase; }
+            .company-info p { margin: 2px 0; font-size: 11px; color: #555; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
+            th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background: #f4f5f7; font-weight: bold; color: #444; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; }
+            tr:hover { background: #f9fafb; }
+            @media print {
+              body { padding: 0; }
+              th { background: #f4f5f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-info">
+              ${companyLogoUrl ? `<img src="${companyLogoUrl}" style="max-height: 50px; margin-bottom: 8px;" />` : ''}
+              <h2>${companyNameStr}</h2>
+              ${companyAddressStr ? `<p>${companyAddressStr}</p>` : ''}
+              <p>${[companyPhoneStr, companyEmailStr, companyGstinStr].filter(Boolean).join(' | ')}</p>
+            </div>
+            <div style="text-align: right;">
+              <div class="title">Staff Advances Statement</div>
+              <div class="meta">Generated on: ${new Date().toLocaleString()}</div>
+              <div class="meta">Date Range: ${fromDate ? new Date(fromDate).toLocaleDateString() : 'All Time'} - ${toDate ? new Date(toDate).toLocaleDateString() : 'All Time'}</div>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Advance No</th>
+                <th>Employee Name</th>
+                <th>Code</th>
+                <th style="text-align: right;">Amount</th>
+                <th>Purpose</th>
+                <th>Date Needed</th>
+                <th style="text-align: center;">Status</th>
+                <th style="text-align: right;">Outstanding</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (loading) return <div className="adv-loading"><div className="adv-spinner" /></div>;
@@ -349,10 +554,89 @@ export default function AdvancesList() {
         })}
       </div>
 
+      {/* Date Filters & Exports Toolbar */}
+      <div className="p-4 rounded-2xl bg-white border border-slate-200 flex flex-wrap gap-4 items-center justify-between shadow-sm mb-6">
+        <div className="flex flex-wrap gap-4 items-center w-full sm:w-auto">
+          {/* Find/Search input */}
+          <div className="relative flex-1 sm:flex-none">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search by name, code, purpose, advance no..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full sm:w-64 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-500 outline-none transition-all"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-500 whitespace-nowrap">From:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => {
+                setFromDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:border-indigo-500 outline-none transition-all"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-500 whitespace-nowrap">To:</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => {
+                setToDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs focus:border-indigo-500 outline-none transition-all"
+            />
+          </div>
+
+          {(fromDate || toDate) && (
+            <button
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition cursor-pointer"
+            >
+              Clear Dates
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+            title="Export filtered advances to CSV"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+            title="Print filtered advances to PDF"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print PDF</span>
+          </button>
+        </div>
+      </div>
+
       {/* Table */}
       <div className="adv-table-wrapper">
-        {advances.length === 0 ? (
-          <div className="adv-empty">No advance requests yet. Click "+ New Advance" to get started.</div>
+        {filteredAdvances.length === 0 ? (
+          <div className="adv-empty">
+            {advances.length === 0
+              ? 'No advance requests yet. Click "+ New Advance" to get started.'
+              : 'No advance requests found matching filters.'}
+          </div>
         ) : (
           <table className="adv-table">
             <thead>
@@ -368,7 +652,7 @@ export default function AdvancesList() {
               </tr>
             </thead>
             <tbody>
-              {advances.map((adv) => {
+              {currentAdvances.map((adv) => {
                 const sm = statusMeta[adv.status] || { label: adv.status, colour: '#6b7280' };
                 return (
                   <tr key={adv.id} className="adv-row" onClick={() => setSelected(adv)}>
@@ -413,6 +697,74 @@ export default function AdvancesList() {
               })}
             </tbody>
           </table>
+        )}
+
+        {/* Pagination Controls */}
+        {filteredAdvances.length > 0 && (
+          <div className="px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50">
+            <div className="text-xs text-slate-500 font-medium">
+              Showing <span className="font-bold text-slate-800">{indexOfFirstItem + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">
+                {Math.min(indexOfLastItem, filteredAdvances.length)}
+              </span>{' '}
+              of <span className="font-bold text-slate-800">{filteredAdvances.length}</span> advances
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer bg-white"
+                >
+                  Previous
+                </button>
+
+                {/* Render page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => {
+                  const isFirstOrLast = pageNumber === 1 || pageNumber === totalPages;
+                  const isNearCurrent = Math.abs(pageNumber - currentPage) <= 1;
+
+                  if (isFirstOrLast || isNearCurrent) {
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === pageNumber
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/15 border-none'
+                            : 'border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 bg-white'
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  }
+
+                  if (
+                    (pageNumber === 2 && currentPage > 3) ||
+                    (pageNumber === totalPages - 1 && currentPage < totalPages - 2)
+                  ) {
+                    return (
+                      <span key={pageNumber} className="px-1 text-slate-400 text-xs font-semibold">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  return null;
+                })}
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer bg-white"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

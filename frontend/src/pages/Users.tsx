@@ -99,6 +99,8 @@ const permissionCategories = [
 
       // Search and filters
       const [searchQuery, setSearchQuery] = useState('');
+      const [usersPage, setUsersPage] = useState(1);
+      const usersPerPage = 10;
 
       // Add user modal state
       const [showAddModal, setShowAddModal] = useState(false);
@@ -533,6 +535,14 @@ const permissionCategories = [
         u.role.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
+      // Reset page when search changes
+      useEffect(() => { setUsersPage(1); }, [searchQuery]);
+
+      const usersTotalPages = Math.ceil(filteredUsers.length / usersPerPage);
+      const usersIndexFirst = (usersPage - 1) * usersPerPage;
+      const usersIndexLast = usersIndexFirst + usersPerPage;
+      const currentUsers = filteredUsers.slice(usersIndexFirst, usersIndexLast);
+
       // Group permissions dynamically
       const getCategorizedPerms = () => {
         const categorized: Record<string, Permission[]> = {};
@@ -685,7 +695,7 @@ const permissionCategories = [
                           </td>
                         </tr>
                       ) : (
-                        filteredUsers.map((user) => (
+                        currentUsers.map((user) => (
                           <tr key={user.id} className="hover:bg-white/5 transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
@@ -826,6 +836,64 @@ const permissionCategories = [
                       )}
                     </tbody>
                   </table>
+
+                  {/* Pagination Controls */}
+                  {filteredUsers.length > 0 && (
+                    <div className="px-6 py-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-xs text-gray-400 font-medium">
+                        Showing <span className="font-bold text-white">{usersIndexFirst + 1}</span> to{' '}
+                        <span className="font-bold text-white">{Math.min(usersIndexLast, filteredUsers.length)}</span>{' '}
+                        of <span className="font-bold text-white">{filteredUsers.length}</span> users
+                      </div>
+
+                      {usersTotalPages > 1 && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setUsersPage((p) => Math.max(p - 1, 1))}
+                            disabled={usersPage === 1}
+                            className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer bg-transparent"
+                          >
+                            Previous
+                          </button>
+
+                          {Array.from({ length: usersTotalPages }, (_, i) => i + 1).map((pageNum) => {
+                            const isEdge = pageNum === 1 || pageNum === usersTotalPages;
+                            const isNear = Math.abs(pageNum - usersPage) <= 1;
+                            if (isEdge || isNear) {
+                              return (
+                                <button
+                                  key={pageNum}
+                                  onClick={() => setUsersPage(pageNum)}
+                                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    usersPage === pageNum
+                                      ? 'bg-indigo-600 text-white shadow-md border-none'
+                                      : 'border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white bg-transparent'
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            }
+                            if (
+                              (pageNum === 2 && usersPage > 3) ||
+                              (pageNum === usersTotalPages - 1 && usersPage < usersTotalPages - 2)
+                            ) {
+                              return <span key={pageNum} className="px-1 text-gray-500 text-xs font-semibold">...</span>;
+                            }
+                            return null;
+                          })}
+
+                          <button
+                            onClick={() => setUsersPage((p) => Math.min(p + 1, usersTotalPages))}
+                            disabled={usersPage === usersTotalPages}
+                            className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer bg-transparent"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

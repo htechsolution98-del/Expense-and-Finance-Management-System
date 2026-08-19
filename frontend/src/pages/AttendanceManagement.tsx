@@ -180,6 +180,20 @@ export default function AttendanceManagement() {
     return true;
   });
 
+  // Pagination for admin records
+  const [attPage, setAttPage] = useState(1);
+  const attItemsPerPage = 10;
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setAttPage(1);
+  }, [adminFilterType, adminFilterDate, adminStartDate, adminEndDate, adminFilterMode]);
+
+  const attTotalPages = Math.ceil(filteredRecords.length / attItemsPerPage);
+  const attIndexFirst = (attPage - 1) * attItemsPerPage;
+  const attIndexLast = attIndexFirst + attItemsPerPage;
+  const currentPageRecords = filteredRecords.slice(attIndexFirst, attIndexLast);
+
   // Geolocation watch
   useEffect(() => {
     if (navigator.geolocation) {
@@ -1051,7 +1065,7 @@ export default function AttendanceManagement() {
                       </td>
                     </tr>
                   ) : (
-                    filteredRecords.map((record) => (
+                    currentPageRecords.map((record) => (
                       <tr key={record.id} className="hover:bg-white/5">
                         <td className="py-3.5">
                           <div className="font-semibold text-white">{record.employee?.name}</div>
@@ -1138,6 +1152,71 @@ export default function AttendanceManagement() {
                   )}
                 </tbody>
               </table>
+
+              {/* Pagination Controls */}
+              {filteredRecords.length > 0 && (
+                <div className="px-6 py-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-xs text-gray-400 font-medium">
+                    Showing <span className="font-bold text-white">{attIndexFirst + 1}</span> to{' '}
+                    <span className="font-bold text-white">{Math.min(attIndexLast, filteredRecords.length)}</span>{' '}
+                    of <span className="font-bold text-white">{filteredRecords.length}</span> employees
+                  </div>
+
+                  {attTotalPages > 1 && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setAttPage((p) => Math.max(p - 1, 1))}
+                        disabled={attPage === 1}
+                        className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer bg-transparent"
+                      >
+                        Previous
+                      </button>
+
+                      {Array.from({ length: attTotalPages }, (_, i) => i + 1).map((pageNum) => {
+                        const isFirstOrLast = pageNum === 1 || pageNum === attTotalPages;
+                        const isNearCurrent = Math.abs(pageNum - attPage) <= 1;
+
+                        if (isFirstOrLast || isNearCurrent) {
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setAttPage(pageNum)}
+                              className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                attPage === pageNum
+                                  ? 'bg-indigo-600 text-white shadow-md border-none'
+                                  : 'border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white bg-transparent'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        }
+
+                        if (
+                          (pageNum === 2 && attPage > 3) ||
+                          (pageNum === attTotalPages - 1 && attPage < attTotalPages - 2)
+                        ) {
+                          return (
+                            <span key={pageNum} className="px-1 text-gray-500 text-xs font-semibold">
+                              ...
+                            </span>
+                          );
+                        }
+
+                        return null;
+                      })}
+
+                      <button
+                        onClick={() => setAttPage((p) => Math.min(p + 1, attTotalPages))}
+                        disabled={attPage === attTotalPages}
+                        className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer bg-transparent"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

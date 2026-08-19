@@ -326,20 +326,26 @@
 ### ✅ Phase 22: Company Announcements Module `[COMPLETE]`
 - [x] Implement the `Announcement` model in the Prisma schema and update Company and User relationships.
 - [x] Update database schema via `npx prisma db push` and regenerate Prisma client.
-- [x] Seed new permissions `ANNOUNCEMENT_VIEW` and `ANNOUNCEMENT_CREATE` in `seed.ts` and map to standard roles (ADMIN/SUPER_ADMIN can manage, STAFF/ACCOUNTS can view).
+- [x] Seed permission `ANNOUNCEMENT_VIEW` in `seed.ts` and map to all roles dynamically.
+- [x] Restrict creation, update, and deletion of announcements to `SUPER_ADMIN` role using `SUPER_ADMIN_ONLY` guards.
 - [x] Build announcement backend controller endpoints for fetching, creating, updating, and deleting announcements.
 - [x] Configure tenant boundary verification, active status filters, and expiresAt checks in announcement controller.
 - [x] Implement audit logs creation on all announcement modifications (Create, Update, Delete) with details about changed properties.
 - [x] Register new API routes inside the backend Express router.
-- [x] Build frontend `Announcements.tsx` with list feed, filter tabs, announcement creation modal, and target role checklist.
+- [x] Build frontend `Announcements.tsx` with list feed, filter tabs, announcement creation modal (SUPER_ADMIN only), and target role checklist.
 - [x] Register `/announcements` path inside frontend `App.tsx` routes, guarded by `ANNOUNCEMENT_VIEW`.
 - [x] Add "Announcements" menu item in the overview section of `Sidebar.tsx`.
 - [x] Integrate latest active announcement banner widget on employee self-service and executive overview panels in `Dashboard.tsx`.
-- [x] Create comprehensive automated integration tests verifying visibility rules, expired notices, draft filters, and STAFF role blocks (`scratch/run_announcement_tests.ts`), and run successfully.
+- [x] Create comprehensive automated integration tests verifying visibility rules, expired notices, draft filters, and STAFF/EMPLOYER role blocks (`scratch/run_announcement_tests.ts`), and run successfully.
 - [x] Verify frontend and backend typescript compilation checks (`npx tsc --noEmit`) with 0 errors.
 
+---
 
-
-
-
-
+### ✅ Phase 23: Interactive Table Controls & Data Exporting (Excel/CSV/PDF) `[COMPLETE]`
+- [x] Fixed PaymentCategories.tsx delete expense syntax compilation crash.
+- [x] Add client-side pagination (10 records per page) with interactive page selector footer controls in ExpensesList.tsx, Vouchers.tsx, Loans.tsx, and SalaryStructures.tsx.
+- [x] Add From Date / To Date filters in Vouchers.tsx, ExpensesList.tsx, Ledger.tsx, Loans.tsx, and SalaryStructures.tsx.
+- [x] Add Search / Find filters in ExpensesList.tsx, Loans.tsx, and SalaryStructures.tsx.
+- [x] Add UTF-8 BOM CSV Export capabilities to download filtered transaction/voucher/expense/loan/salary history inside Vouchers.tsx, ExpensesList.tsx, Ledger.tsx, Loans.tsx, and SalaryStructures.tsx.
+- [x] Add print-friendly PDF generation for transactions ledger with company branding headers in Ledger.tsx, ExpensesList.tsx, Vouchers.tsx, Loans.tsx, and SalaryStructures.tsx.
+- [x] Verify frontend and backend typescript compilation checks (`npx tsc --noEmit`) with 0 errors.

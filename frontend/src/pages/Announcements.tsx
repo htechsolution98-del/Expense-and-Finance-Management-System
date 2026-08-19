@@ -69,7 +69,6 @@ export const Announcements: React.FC = () => {
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : { role: 'STAFF', permissions: [] };
   const canManage =
-    user.permissions?.includes('ANNOUNCEMENT_CREATE') ||
     user.permissions?.includes('*') ||
     user.role === 'SUPER_ADMIN';
 
