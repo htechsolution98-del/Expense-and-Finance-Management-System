@@ -22,6 +22,7 @@ import LeaveManagement from './pages/LeaveManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
 import AttendanceConfig from './pages/AttendanceConfig';
 import { Loans } from './pages/Loans';
+import { Announcements } from './pages/Announcements';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { DashboardLayout } from './layouts/DashboardLayout';
 
@@ -39,6 +40,11 @@ const App: React.FC = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/leaves" element={<LeaveManagement />} />
             <Route path="/attendance" element={<AttendanceManagement />} />
+            
+            {/* Announcements Routes */}
+            <Route element={<ProtectedRoute requiredPermission="ANNOUNCEMENT_VIEW" />}>
+              <Route path="/announcements" element={<Announcements />} />
+            </Route>
             
             {/* User & Access Management Routes */}
             <Route element={<ProtectedRoute requiredPermission="USER_VIEW" />}>

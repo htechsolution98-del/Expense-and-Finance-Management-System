@@ -321,6 +321,24 @@
 - [x] Optimize all data tables across the system to fit exactly inside the screen width at 100% resolution with no horizontal scrollbar or element overflow. We achieved this by reducing cell padding, font size to 11px, and introducing max-widths and ellipses text truncation.
 - [x] Convert Attendance KPI cards, timeline components, WFH toggle settings, and manual action forms to the unified light theme styling, removing all residual dark-themed backgrounds and borders.
 
+---
+
+### ✅ Phase 22: Company Announcements Module `[COMPLETE]`
+- [x] Implement the `Announcement` model in the Prisma schema and update Company and User relationships.
+- [x] Update database schema via `npx prisma db push` and regenerate Prisma client.
+- [x] Seed new permissions `ANNOUNCEMENT_VIEW` and `ANNOUNCEMENT_CREATE` in `seed.ts` and map to standard roles (ADMIN/SUPER_ADMIN can manage, STAFF/ACCOUNTS can view).
+- [x] Build announcement backend controller endpoints for fetching, creating, updating, and deleting announcements.
+- [x] Configure tenant boundary verification, active status filters, and expiresAt checks in announcement controller.
+- [x] Implement audit logs creation on all announcement modifications (Create, Update, Delete) with details about changed properties.
+- [x] Register new API routes inside the backend Express router.
+- [x] Build frontend `Announcements.tsx` with list feed, filter tabs, announcement creation modal, and target role checklist.
+- [x] Register `/announcements` path inside frontend `App.tsx` routes, guarded by `ANNOUNCEMENT_VIEW`.
+- [x] Add "Announcements" menu item in the overview section of `Sidebar.tsx`.
+- [x] Integrate latest active announcement banner widget on employee self-service and executive overview panels in `Dashboard.tsx`.
+- [x] Create comprehensive automated integration tests verifying visibility rules, expired notices, draft filters, and STAFF role blocks (`scratch/run_announcement_tests.ts`), and run successfully.
+- [x] Verify frontend and backend typescript compilation checks (`npx tsc --noEmit`) with 0 errors.
+
+
 
 
 

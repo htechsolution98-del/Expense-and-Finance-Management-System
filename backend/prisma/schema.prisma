@@ -48,6 +48,7 @@ model Company {
   holidays             Holiday[]
   attendanceConfigs    AttendanceConfig[]
   attendanceRecords    AttendanceRecord[]
+  announcements        Announcement[]
 
   @@map("companies")
 }
@@ -79,6 +80,7 @@ model User {
   rejectedLeaves    LeaveRequest[]        @relation("LeaveRejector")
   cancelledLeaves   LeaveRequest[]        @relation("LeaveCanceller")
   leaveApprovals    LeaveApproval[]
+  announcementsCreated Announcement[]      @relation("AnnouncementCreator")
 
   @@map("users")
 }
@@ -841,4 +843,23 @@ model AttendanceBreak {
   attendance AttendanceRecord @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
 
   @@map("attendance_breaks")
+}
+
+model Announcement {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  title       String
+  content     String
+  attachment  String?
+  targetRoles String?  @map("target_roles")
+  status      String   @default("ACTIVE")
+  expiresAt   DateTime? @map("expires_at")
+  createdById String   @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company   Company @relation(fields: [companyId], references: [id])
+  createdBy User    @relation("AnnouncementCreator", fields: [createdById], references: [id])
+
+  @@map("announcements")
 }

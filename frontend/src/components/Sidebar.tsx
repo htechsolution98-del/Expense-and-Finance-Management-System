@@ -14,7 +14,8 @@ import {
   Building2,
   Settings,
   Calendar,
-  Clock
+  Clock,
+  Megaphone
 } from 'lucide-react';
 
 // Helper to read user from localStorage
@@ -67,6 +68,13 @@ export const Sidebar: React.FC = () => {
           icon: <LayoutDashboard className="w-5 h-5" />,
           enabled: true,
           visible: true
+        },
+        {
+          name: 'Announcements',
+          path: '/announcements',
+          icon: <Megaphone className="w-5 h-5" />,
+          enabled: true,
+          visible: hasPermission(['ANNOUNCEMENT_VIEW'])
         }
       ]
     },

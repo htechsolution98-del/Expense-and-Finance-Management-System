@@ -64,6 +64,8 @@ async function main() {
     { name: 'LEAVE_BALANCE_MANAGE', description: 'Manage employee leave balances' },
     { name: 'LEAVE_REPORT_VIEW', description: 'View leave reports and analytics' },
     { name: 'LEAVE_POLICY_MANAGE', description: 'Manage company leave policies' },
+    { name: 'ANNOUNCEMENT_VIEW', description: 'View company announcements' },
+    { name: 'ANNOUNCEMENT_CREATE', description: 'Create, edit, and delete company announcements' },
   ];
 
   const dbPermissions: Record<string, string> = {};
@@ -99,6 +101,7 @@ async function main() {
         'ADVANCE_VIEW', 'ADVANCE_CREATE', 'ADVANCE_APPROVE',
         'REPORT_VIEW',
         'LEAVE_VIEW', 'LEAVE_APPLY', 'LEAVE_APPROVE', 'LEAVE_REJECT', 'LEAVE_CANCEL', 'LEAVE_MANAGE', 'LEAVE_BALANCE_MANAGE', 'LEAVE_REPORT_VIEW', 'LEAVE_POLICY_MANAGE',
+        'ANNOUNCEMENT_VIEW', 'ANNOUNCEMENT_CREATE',
       ],
     },
     {
@@ -114,6 +117,7 @@ async function main() {
         'ADVANCE_VIEW', 'ADVANCE_CREATE', 'ADVANCE_APPROVE',
         'REPORT_VIEW',
         'LEAVE_VIEW', 'LEAVE_APPLY', 'LEAVE_APPROVE', 'LEAVE_REJECT', 'LEAVE_CANCEL', 'LEAVE_REPORT_VIEW',
+        'ANNOUNCEMENT_VIEW',
       ],
     },
     {
@@ -123,6 +127,7 @@ async function main() {
         'EXPENSE_VIEW', 'EXPENSE_CREATE',
         'ADVANCE_VIEW', 'ADVANCE_CREATE',
         'LEAVE_VIEW', 'LEAVE_APPLY', 'LEAVE_CANCEL',
+        'ANNOUNCEMENT_VIEW',
       ],
     },
   ];

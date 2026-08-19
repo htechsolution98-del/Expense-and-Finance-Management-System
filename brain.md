@@ -514,6 +514,22 @@ Standardized the entire UI color system (light SaaS theme) and resolved multiple
 
 ---
 
+### ✅ Phase 22 — Company Announcements Module `[COMPLETE]`
+
+**Overview:**
+Implemented a robust and premium Company Announcements Module. Admins can broadcast important updates targeted at specific roles or company-wide, and standard employees can view them on their dashboards and a dedicated announcements bulletin.
+
+**Key Technical Details:**
+- **Database Model:** Created the `Announcement` model in `schema.prisma` with title, content, status (`DRAFT`, `ACTIVE`, `ARCHIVED`), targetRoles, expiresAt, and creator mappings.
+- **Granular Permissions:** Seeded `ANNOUNCEMENT_VIEW` and `ANNOUNCEMENT_CREATE` permissions in the database and mapped standard roles (ADMIN/SUPER_ADMIN can manage, STAFF/ACCOUNTS can view).
+- **Backend APIs:** Built 4 endpoints `/api/v1/announcements` supporting creation, dynamic role filtering, status handling, expiration bounds, and detailed change audit logs.
+- **Frontend Directory & Router:** Created `Announcements.tsx` featuring grid notice boards, creation/editing dialog forms, role targeting checklist inputs, and registered the protected route.
+- **Welcome Banner Widget:** Configured `Dashboard.tsx` to query and highlight the latest active company announcement on both employee self-service and executive overview panels.
+
+**Verified:** Automated integration test suite passed (`scratch/run_announcement_tests.ts`). Both frontend and backend TypeScript compilation checked clean with zero errors (`npx tsc --noEmit`).
+
+---
+
 ## 🏆 ALL PHASES & MODULES FULLY UNLOCKED, IMPLEMENTED & VERIFIED! 🏆
 
 ---

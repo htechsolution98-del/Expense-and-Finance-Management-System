@@ -14,7 +14,8 @@ import {
   PlusCircle,
   FileText,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Megaphone
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -28,6 +29,7 @@ export const Dashboard: React.FC = () => {
   const [cashFlow, setCashFlow] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [staffExpenses, setStaffExpenses] = useState<any[]>([]);
+  const [latestAnnouncement, setLatestAnnouncement] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -56,6 +58,18 @@ export const Dashboard: React.FC = () => {
   const loadDashboardData = useCallback(async () => {
     setError('');
     try {
+      try {
+        const annRes = await api.get('/announcements');
+        const activeAnns = (annRes.data.data || []).filter((a: any) => a.status === 'ACTIVE' && (!a.expiresAt || new Date(a.expiresAt) > new Date()));
+        if (activeAnns.length > 0) {
+          setLatestAnnouncement(activeAnns[0]);
+        } else {
+          setLatestAnnouncement(null);
+        }
+      } catch (annErr) {
+        console.error('Failed to load announcements for dashboard: ', annErr);
+      }
+
       if (hasReportView) {
         const [sumRes, cfRes, catRes] = await Promise.all([
           api.get('/reports/dashboard-summary'),
@@ -124,6 +138,30 @@ export const Dashboard: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Latest Announcement */}
+        {latestAnnouncement && (
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-l-4 border-[var(--primary)] p-5 rounded-2xl shadow-sm flex items-start gap-4 animate-scale-in relative overflow-hidden">
+            <div className="p-2 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl">
+              <Megaphone className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-[var(--primary)] tracking-wider">Latest Announcement</span>
+                <span className="text-[10px] text-slate-400 font-medium">• {new Date(latestAnnouncement.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+              </div>
+              <h4 className="text-sm font-extrabold text-slate-800 mt-1 truncate">{latestAnnouncement.title}</h4>
+              <p className="text-xs text-slate-600 mt-1 line-clamp-2">{latestAnnouncement.content}</p>
+              <button 
+                onClick={() => navigate('/announcements')}
+                className="text-[11px] font-bold text-[var(--primary)] hover:underline mt-2 flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
+              >
+                <span>Read Full Announcement</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="p-4 rounded-xl bg-red-50 border border-red-100 text-red-700 flex items-center gap-2 text-sm">
@@ -261,6 +299,30 @@ export const Dashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Latest Announcement */}
+      {latestAnnouncement && (
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-l-4 border-[var(--primary)] p-5 rounded-2xl shadow-sm flex items-start gap-4 animate-scale-in relative overflow-hidden">
+          <div className="p-2 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl">
+            <Megaphone className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase text-[var(--primary)] tracking-wider">Latest Announcement</span>
+              <span className="text-[10px] text-slate-400 font-medium">• {new Date(latestAnnouncement.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+            </div>
+            <h4 className="text-sm font-extrabold text-slate-800 mt-1 truncate">{latestAnnouncement.title}</h4>
+            <p className="text-xs text-slate-600 mt-1 line-clamp-2">{latestAnnouncement.content}</p>
+            <button 
+              onClick={() => navigate('/announcements')}
+              className="text-[11px] font-bold text-[var(--primary)] hover:underline mt-2 flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
+            >
+              <span>Read Full Announcement</span>
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="p-4 rounded-xl bg-red-50 border border-red-100 text-red-700 flex items-center gap-2 text-sm">
