@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { api } from '../services/api';
+import { api, getBackendUrl } from '../services/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import '../styles/employeePortal.css';
 
@@ -243,7 +243,7 @@ export default function EmployeePortal() {
     const printWindow = window.open('', '', 'width=800,height=900');
     if (!printWindow) return;
 
-    const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+    const companyLogoUrl = companyInfo?.logo ? `${getBackendUrl()}/${companyInfo.logo}` : '';
     const companyNameStr = companyInfo?.name || 'COMPANY NAME';
     const companyAddressStr = companyInfo?.address || '';
     const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';
@@ -704,7 +704,7 @@ export default function EmployeePortal() {
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                   {companyInfo?.logo && (
                     <img 
-                      src={`http://localhost:5000/${companyInfo.logo}`} 
+                      src={`${getBackendUrl()}/${companyInfo.logo}`} 
                       alt="Company Logo" 
                       style={{ maxHeight: '55px', maxWidth: '140px', objectFit: 'contain' }} 
                     />

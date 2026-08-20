@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
-import { api } from '../services/api';
+import { api, getBackendUrl } from '../services/api';
 import { RefreshCw, Filter, ShieldAlert, Ban, X, AlertCircle, Download, Printer } from 'lucide-react';
 
 interface Transaction {
@@ -171,7 +171,7 @@ export const Ledger: React.FC = () => {
       const printWindow = window.open('', '', 'width=900,height=800');
       if (!printWindow) return;
 
-      const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+      const companyLogoUrl = companyInfo?.logo ? `${getBackendUrl()}/${companyInfo.logo}` : '';
       const companyNameStr = companyInfo?.name || 'COMPANY NAME';
       const companyAddressStr = companyInfo?.address || '';
       const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';

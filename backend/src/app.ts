@@ -20,6 +20,7 @@ app.use(
       process.env.FRONTEND_URL || 'http://localhost:5173',
       'http://localhost:5173',
       'http://localhost:5174',
+      'https://expense-and-finance-management-system.onrender.com',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'Idempotency-Key'],

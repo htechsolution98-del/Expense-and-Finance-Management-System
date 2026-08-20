@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, getBackendUrl } from '../services/api';
 import { Building2, Phone, Mail, MapPin, FileText, Upload, Save, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 interface CompanyProfile {
@@ -43,7 +43,7 @@ export const CompanySettings: React.FC = () => {
       setAddress(data.address || '');
       setGstin(data.gstin || '');
       if (data.logo) {
-        setLogoPreview(`http://localhost:5000/${data.logo}`);
+        setLogoPreview(`${getBackendUrl()}/${data.logo}`);
       }
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Failed to load company profile.');
@@ -87,7 +87,7 @@ export const CompanySettings: React.FC = () => {
 
       setProfile(response.data.data);
       if (response.data.data.logo) {
-        setLogoPreview(`http://localhost:5000/${response.data.data.logo}?t=${Date.now()}`);
+        setLogoPreview(`${getBackendUrl()}/${response.data.data.logo}?t=${Date.now()}`);
       }
       window.dispatchEvent(new Event('company-profile-updated'));
       setSuccessMsg('Company profile and logo updated successfully!');

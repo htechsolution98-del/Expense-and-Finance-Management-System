@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
-import { api } from '../services/api';
+import { api, getBackendUrl } from '../services/api';
 import { 
   Plus, RefreshCw, Wallet, CheckCircle, AlertCircle, X, 
   ChevronRight, Calculator, Loader2, Printer 
@@ -148,7 +148,7 @@ export const PayrollList: React.FC = () => {
     const printWindow = window.open('', '', 'width=800,height=900');
     if (!printWindow || !selectedBatch) return;
 
-    const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+    const companyLogoUrl = companyInfo?.logo ? `${getBackendUrl()}/${companyInfo.logo}` : '';
     const companyNameStr = companyInfo?.name || 'COMPANY NAME';
     const companyAddressStr = companyInfo?.address || '';
     const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';

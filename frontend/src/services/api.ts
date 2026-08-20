@@ -68,3 +68,14 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const getBackendUrl = () => {
+  const url = import.meta.env.VITE_API_URL || '';
+  if (url && url.includes('/api/v1')) {
+    return url.replace('/api/v1', '');
+  }
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  return window.location.origin;
+};

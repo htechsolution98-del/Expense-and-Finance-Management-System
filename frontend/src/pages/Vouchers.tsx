@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
-import { api } from '../services/api';
+import { api, getBackendUrl } from '../services/api';
 import { 
   Receipt, Plus, Search, Loader2, CheckCircle, AlertCircle, X,
   Printer, Trash2, Edit, Eye, Clock, Download
@@ -196,7 +196,7 @@ export const Vouchers: React.FC = () => {
     const printWindow = window.open('', '', 'width=800,height=800');
     if (!printWindow) return;
     
-    const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+    const companyLogoUrl = companyInfo?.logo ? `${getBackendUrl()}/${companyInfo.logo}` : '';
     const companyNameStr = companyInfo?.name || 'COMPANY NAME';
     const companyAddressStr = companyInfo?.address || '';
     const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';
@@ -377,7 +377,7 @@ export const Vouchers: React.FC = () => {
     const printWindow = window.open('', '', 'width=900,height=800');
     if (!printWindow) return;
 
-    const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+    const companyLogoUrl = companyInfo?.logo ? `${getBackendUrl()}/${companyInfo.logo}` : '';
     const companyNameStr = companyInfo?.name || 'COMPANY NAME';
     const companyAddressStr = companyInfo?.address || '';
     const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';
@@ -693,7 +693,7 @@ export const Vouchers: React.FC = () => {
                                   alert('No bill attached to this voucher');
                                   return;
                                 }
-                                const fileUrl = `http://localhost:5000/${v.filePath.includes('uploads') ? `uploads/${v.filePath.split(/[\\/]/).pop()}` : v.filePath}`;
+                                const fileUrl = `${getBackendUrl()}/${v.filePath.includes('uploads') ? `uploads/${v.filePath.split(/[\\/]/).pop()}` : v.filePath}`;
                                 setViewBillUrl(fileUrl);
                               }}
                               title={v.filePath ? "View Attached Bill" : "No Bill Attached"}

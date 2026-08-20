@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, RefreshCw, AlertCircle, X, BadgePercent, Download, Printer, Search } from 'lucide-react';
-import { api } from '../services/api';
+import { api, getBackendUrl } from '../services/api';
 
 interface SalaryStructure {
   id: string;
@@ -321,7 +321,7 @@ export const SalaryStructures: React.FC = () => {
     const printWindow = window.open('', '', 'width=900,height=800');
     if (!printWindow) return;
 
-    const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+    const companyLogoUrl = companyInfo?.logo ? `${getBackendUrl()}/${companyInfo.logo}` : '';
     const companyNameStr = companyInfo?.name || 'COMPANY NAME';
     const companyAddressStr = companyInfo?.address || '';
     const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';

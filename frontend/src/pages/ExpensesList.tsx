@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, getBackendUrl } from '../services/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { 
   Plus, Receipt, RefreshCw, Wallet, AlertCircle, X, Shield, Clock, Trash2, Edit, Download, Search, Printer
@@ -375,7 +375,7 @@ export const ExpensesList: React.FC = () => {
     const printWindow = window.open('', '', 'width=900,height=800');
     if (!printWindow) return;
 
-    const companyLogoUrl = companyInfo?.logo ? `http://localhost:5000/${companyInfo.logo}` : '';
+    const companyLogoUrl = companyInfo?.logo ? `${getBackendUrl()}/${companyInfo.logo}` : '';
     const companyNameStr = companyInfo?.name || 'COMPANY NAME';
     const companyAddressStr = companyInfo?.address || '';
     const companyPhoneStr = companyInfo?.phone ? `Ph: ${companyInfo.phone}` : '';
@@ -887,7 +887,7 @@ export const ExpensesList: React.FC = () => {
               {selectedExpense.receiptUrl && (
                 <div className="flex justify-between">
                   <span className="text-slate-500">Receipt Bill:</span>
-                  <a href={`http://localhost:5000${selectedExpense.receiptUrl}`} target="_blank" rel="noreferrer" className="text-[var(--primary)] font-bold hover:underline">View Receipt</a>
+                   <a href={`${getBackendUrl()}${selectedExpense.receiptUrl}`} target="_blank" rel="noreferrer" className="text-[var(--primary)] font-bold hover:underline">View Receipt</a>
                 </div>
               )}
               {selectedExpense.paymentReference && (
@@ -899,7 +899,7 @@ export const ExpensesList: React.FC = () => {
               {selectedExpense.paymentProofUrl && (
                 <div className="flex justify-between">
                   <span className="text-slate-500">Payment Proof:</span>
-                  <a href={`http://localhost:5000${selectedExpense.paymentProofUrl}`} target="_blank" rel="noreferrer" className="text-emerald-600 font-bold hover:underline">View Proof</a>
+                   <a href={`${getBackendUrl()}${selectedExpense.paymentProofUrl}`} target="_blank" rel="noreferrer" className="text-emerald-600 font-bold hover:underline">View Proof</a>
                 </div>
               )}
 
