@@ -677,7 +677,7 @@ const permissionCategories = [
                         <th className="px-6 py-4">Status</th>
                         <th className="px-6 py-4">Access Role</th>
                         <th className="px-6 py-4">Registration Date</th>
-                        {isSuperAdmin && <th className="px-6 py-4 text-right">Actions</th>}
+                        {isSuperAdmin && <th className="px-6 py-4 text-right whitespace-nowrap actions-cell">Actions</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-sm">
@@ -715,16 +715,23 @@ const permissionCategories = [
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <span
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                              <button
+                                onClick={() => handleToggleStatus(user)}
+                                disabled={currentUser && currentUser.id === user.id}
+                                title={currentUser && currentUser.id === user.id ? "You cannot deactivate your own account" : `Click to ${user.status === 'ACTIVE' ? 'deactivate' : 'activate'} this user`}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+                                  currentUser && currentUser.id === user.id
+                                    ? 'opacity-60 cursor-not-allowed'
+                                    : 'cursor-pointer hover:scale-105 active:scale-95'
+                                } ${
                                   user.status === 'ACTIVE'
-                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                    : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                                    : 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
                                 }`}
                               >
                                 <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-400' : 'bg-red-400'}`} />
                                 {user.status}
-                              </span>
+                              </button>
                             </td>
                             <td className="px-6 py-4">
                               {editingUserId === user.id ? (
@@ -763,8 +770,8 @@ const permissionCategories = [
                               })}
                             </td>
                             {isSuperAdmin && (
-                              <td className="px-6 py-4 text-right">
-                                <div className="flex justify-end gap-2">
+                              <td className="px-6 py-4 text-right whitespace-nowrap actions-cell">
+                                <div className="flex justify-end gap-2 min-w-max ml-auto">
                                       <button
                                           onClick={() => {
                                             setEditUserFormId(user.id);
@@ -786,15 +793,13 @@ const permissionCategories = [
                                           Change Role
                                         </button>
                                       )}
-                                      {user.role !== 'SUPER_ADMIN' && (
-                                        <button
-                                          onClick={() => openExtraPermsModal(user)}
-                                          className="px-3 py-1.5 rounded-lg border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-400 hover:text-violet-300 text-xs font-semibold cursor-pointer transition-all"
-                                          title="Grant extra individual permissions to this user"
-                                        >
-                                          Extra Perms
-                                        </button>
-                                      )}
+                                      <button
+                                        onClick={() => openExtraPermsModal(user)}
+                                        className="px-3 py-1.5 rounded-lg border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-400 hover:text-violet-300 text-xs font-semibold cursor-pointer transition-all"
+                                        title="Grant extra individual permissions to this user"
+                                      >
+                                        Extra Perms
+                                      </button>
                                       
                                       <button
                                         onClick={() => {
@@ -809,17 +814,6 @@ const permissionCategories = [
                                         title="Reset this user's password as Super Admin"
                                       >
                                         Reset PW
-                                      </button>
-                                      <button
-                                        onClick={() => handleToggleStatus(user)}
-                                        disabled={currentUser && currentUser.id === user.id}
-                                        className={`px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all ${
-                                          user.status === 'ACTIVE'
-                                            ? 'bg-red-500/5 hover:bg-red-500/10 border-red-500/10 hover:border-red-500/20 text-red-400 disabled:opacity-50'
-                                            : 'bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/10 hover:border-emerald-500/20 text-emerald-400'
-                                        }`}
-                                      >
-                                        {user.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                                       </button>
                                       <button
                                         onClick={() => handleDeleteUser(user.id, user.email)}
@@ -1117,6 +1111,21 @@ const permissionCategories = [
                     <RefreshCw className="w-8 h-8 text-violet-500 animate-spin mb-3" />
                     <span className="text-sm text-gray-400">Loading current configuration...</span>
                   </div>
+                ) : extraPermsTargetUser.role === 'SUPER_ADMIN' ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+                    <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                      <Shield className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold text-base">Super Admin Full Privileges</h4>
+                      <p className="text-gray-400 text-sm max-w-md mx-auto mt-2 leading-relaxed">
+                        This user belongs to the <strong className="text-white">SUPER_ADMIN</strong> role and inherently possesses all platform permissions (<code className="bg-white/5 px-1.5 py-0.5 rounded text-indigo-300 font-mono text-xs">*</code>).
+                      </p>
+                      <p className="text-gray-500 text-xs mt-2">
+                        Granting individual permission overrides is not applicable or required.
+                      </p>
+                    </div>
+                  </div>
                 ) : (
                   Object.entries(categorizedPermissions).map(([categoryName, perms]) => (
                     <div key={`extra-${categoryName}`} className="space-y-3">
@@ -1178,14 +1187,16 @@ const permissionCategories = [
                 >
                   Close
                 </button>
-                <button
-                  onClick={handleSaveExtraPerms}
-                  disabled={extraPermsSaving || extraPermsLoading}
-                  className="bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl cursor-pointer disabled:opacity-50 shadow-lg shadow-violet-500/20 transition-all flex items-center gap-2"
-                >
-                  {extraPermsSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  Save Exceptions
-                </button>
+                {extraPermsTargetUser.role !== 'SUPER_ADMIN' && (
+                  <button
+                    onClick={handleSaveExtraPerms}
+                    disabled={extraPermsSaving || extraPermsLoading}
+                    className="bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl cursor-pointer disabled:opacity-50 shadow-lg shadow-violet-500/20 transition-all flex items-center gap-2"
+                  >
+                    {extraPermsSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Save Exceptions
+                  </button>
+                )}
               </div>
             </div>
           </div>

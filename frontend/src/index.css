@@ -254,8 +254,11 @@ table td:nth-child(4) {
 
 /* Guarantee action column is fully visible and not overly squished */
 table th:last-child,
-table td:last-child {
-  max-width: 140px !important;
+table td:last-child,
+.actions-cell {
+  max-width: none !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
 }
 tbody tr {
   border-bottom: 1px solid var(--border) !important;

@@ -349,3 +349,13 @@
 - [x] Add UTF-8 BOM CSV Export capabilities to download filtered transaction/voucher/expense/loan/salary history inside Vouchers.tsx, ExpensesList.tsx, Ledger.tsx, Loans.tsx, and SalaryStructures.tsx.
 - [x] Add print-friendly PDF generation for transactions ledger with company branding headers in Ledger.tsx, ExpensesList.tsx, Vouchers.tsx, Loans.tsx, and SalaryStructures.tsx.
 - [x] Verify frontend and backend typescript compilation checks (`npx tsc --noEmit`) with 0 errors.
+
+---
+
+### ✅ Hotfixes & Maintenance
+- [x] Fix Actions column layout squeeze and overflow clipping inside Users.tsx, remove role restriction on Extra Perms button, and configure a custom info banner for Super Admin target users in the Extra Permissions modal.
+- [x] Remove the `140px` max-width constraint on `table td:last-child` and `table th:last-child` inside `index.css`, replacing it with `max-width: none` and `overflow: visible` to prevent all table action columns across the application from clipping.
+- [x] Convert the plain text Status badge pill (`ACTIVE` / `INACTIVE`) inside `Users.tsx` into an interactive, clickable button toggle that calls the `handleToggleStatus` API, allowing admins to instantly toggle user accounts' activation status in 1 click directly from the Status column.
+- [x] Remove the redundant "Deactivate" / "Activate" button from the table Actions column inside `Users.tsx` to streamline the user management interface controls.
+
+

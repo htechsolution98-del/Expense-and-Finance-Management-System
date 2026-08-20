@@ -545,6 +545,23 @@ Implemented client-side pagination (10 items per page) on Expenses, Vouchers, Lo
 
 ---
 
+### ✅ User Directory Actions & Extra Permissions Fix `[COMPLETE]`
+
+**Overview:**
+Fixed layout squeeze / overflow clipping in the User Directory page table Actions column and refined Extra Permissions buttons.
+
+**Key Technical Details:**
+- **Actions Column Layout:** Added `whitespace-nowrap` on Actions header/cell and `min-w-max ml-auto` on the flex container inside `Users.tsx` to prevent the browser from squeezing the action buttons or clipping them off-screen.
+- **Global Actions Override:** Removed the `max-width: 140px !important;` constraint from `table th:last-child` and `table td:last-child` inside `index.css`, replacing it with `max-width: none`, `overflow: visible`, and `white-space: nowrap` (and mapped to a new `.actions-cell` utility class). This completely eliminates Action buttons clipping across all data tables in the portal.
+- **Extra Perms Button Visibility:** Removed the role constraint `user.role !== 'SUPER_ADMIN'` so the `Extra Perms` action button renders for all users, including the Super Admin.
+- **Super Admin Safeguard:** Configured the Extra Permissions modal to display a premium custom explanation notice for target users with `SUPER_ADMIN` role (since they possess wildcard `*` access and do not need individual overrides) and automatically hide the Save button.
+- **Clickable Status Toggle:** Upgraded the plain text status indicator badge pill (`ACTIVE` / `INACTIVE`) into an interactive, clickable toggle button inside `Users.tsx`. Admins can now immediately toggle user activation statuses in 1 click directly from the `STATUS` column of the table (secured with a self-deactivation warning to prevent active admins from locking themselves out).
+- **Actions Button Clean Up:** Removed the redundant "Deactivate" / "Activate" action button from the Actions list column, simplifying controls and resolving visual duplication since the Status badge toggle is the single source of status management.
+
+**Verified:** Frontend and backend compiled successfully with 0 TypeScript compilation errors (`npx tsc --noEmit`).
+
+---
+
 ## 🏆 ALL PHASES & MODULES FULLY UNLOCKED, IMPLEMENTED & VERIFIED! 🏆
 
 ---
