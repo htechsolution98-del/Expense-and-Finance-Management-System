@@ -21,9 +21,11 @@ app.use(
       'http://localhost:5173',
       'http://localhost:5174',
       'https://expense-and-finance-management-system.onrender.com',
+      'https://expense-and-finance-management-system-1.onrender.com',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'Idempotency-Key'],
+    credentials: true,
   })
 );
 
