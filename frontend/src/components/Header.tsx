@@ -15,6 +15,29 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
 
   const [companyInfo, setCompanyInfo] = useState<{ name: string; currency: string } | null>(null);
 
+  // Notifications states
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.get('/auth/notifications');
+      if (response.data?.success && response.data?.data) {
+        setNotifications(response.data.data.notifications || []);
+        setUnreadCount(response.data.data.count || 0);
+      }
+    } catch (err) {
+      // Silently catch notifications fetch failure
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Password change modal states
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -125,11 +148,77 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
           </span>
         </div>
 
-        {/* Notifications Icon Placeholder */}
-        <button className="relative p-2 text-slate-400 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--primary)]"></span>
-        </button>
+        {/* Notifications Dropdown Container */}
+        <div className="relative">
+          <button 
+            onClick={() => {
+              setShowNotifications(!showNotifications);
+              if (!showNotifications) {
+                fetchNotifications(); // Refresh list on click
+              }
+            }}
+            className={`relative p-2 rounded-lg transition-colors cursor-pointer ${
+              showNotifications ? 'bg-slate-50 text-slate-950' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+            title="View Alerts"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[9px] font-bold text-white bg-red-500 rounded-full min-w-4 h-4 flex items-center justify-center leading-none transform translate-x-1/3 -translate-y-1/3 border border-white">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {showNotifications && (
+            <>
+              {/* Invisible Click Backdrop to Close Dropdown */}
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setShowNotifications(false)}
+              />
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-3 overflow-hidden text-left">
+                <div className="px-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900">Notifications</span>
+                  {unreadCount > 0 && (
+                    <span className="text-[10px] font-bold text-[var(--primary)] px-1.5 py-0.5 rounded bg-[var(--primary-light)]">
+                      {unreadCount} Pending
+                    </span>
+                  )}
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-xs text-slate-400">
+                      No pending approvals or alerts
+                    </div>
+                  ) : (
+                    notifications.map((notif) => (
+                      <div 
+                        key={notif.id}
+                        onClick={() => {
+                          setShowNotifications(false);
+                          navigate(notif.link);
+                        }}
+                        className="px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 cursor-pointer transition-colors"
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <span className="text-[11px] font-bold text-slate-900">{notif.title}</span>
+                          <span className="text-[9px] text-slate-400 shrink-0 font-medium">
+                            {new Date(notif.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                          {notif.message}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="h-6 w-px bg-slate-200"></div>
 

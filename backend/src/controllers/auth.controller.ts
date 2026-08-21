@@ -363,3 +363,119 @@ export const changePassword = async (
     next(err);
   }
 };
+
+export const getNotifications = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { companyId, role, permissions } = req.user!;
+    const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'ACCOUNTS' || role?.startsWith('ADMIN') || role?.startsWith('ACCOUNT');
+    const isSuperAdmin = role === 'SUPER_ADMIN' || permissions.includes('*');
+
+    const hasPermission = (perm: string) => isSuperAdmin || permissions.includes(perm);
+
+    const notifications: Array<{
+      id: string;
+      type: string;
+      title: string;
+      message: string;
+      date: Date;
+      link: string;
+    }> = [];
+
+    // 1. Fetch pending leaves if user has permission
+    if (hasPermission('LEAVE_APPROVE')) {
+      const pendingLeaves = await prisma.leaveRequest.findMany({
+        where: { companyId, status: 'PENDING' },
+        include: { employee: { select: { name: true } }, leaveType: { select: { name: true } } },
+        orderBy: { appliedAt: 'desc' },
+        take: 5,
+      });
+      pendingLeaves.forEach(l => {
+        notifications.push({
+          id: `leave-${l.id}`,
+          type: 'LEAVE',
+          title: 'Pending Leave Request',
+          message: `${l.employee.name} applied for ${l.totalDays} day(s) of ${l.leaveType.name}.`,
+          date: l.appliedAt,
+          link: '/leaves',
+        });
+      });
+    }
+
+    // 2. Fetch pending expenses if user has permission
+    if (hasPermission('EXPENSE_APPROVE')) {
+      const pendingExpenses = await prisma.expense.findMany({
+        where: { companyId, status: 'UNDER_REVIEW' },
+        include: { employee: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      });
+      pendingExpenses.forEach(e => {
+        notifications.push({
+          id: `expense-${e.id}`,
+          type: 'EXPENSE',
+          title: 'Pending Expense Claim',
+          message: `${e.employee.name} submitted a claim of ₹${e.amount}.`,
+          date: e.createdAt,
+          link: '/expenses',
+        });
+      });
+    }
+
+    // 3. Fetch pending advances if user has permission
+    if (hasPermission('ADVANCE_APPROVE')) {
+      const pendingAdvances = await prisma.advance.findMany({
+        where: { companyId, status: 'UNDER_REVIEW' },
+        include: { employee: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      });
+      pendingAdvances.forEach(a => {
+        notifications.push({
+          id: `advance-${a.id}`,
+          type: 'ADVANCE',
+          title: 'Pending Staff Advance',
+          message: `${a.employee.name} requested an advance of ₹${a.amount}.`,
+          date: a.createdAt,
+          link: '/advances',
+        });
+      });
+    }
+
+    // 4. Fetch pending bank account verifications (for Admins / Accounts)
+    if (isAdmin) {
+      const pendingBanks = await prisma.employeeBankAccount.findMany({
+        where: { companyId, status: 'PENDING_VERIFICATION' },
+        include: { employee: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      });
+      pendingBanks.forEach(b => {
+        notifications.push({
+          id: `bank-${b.id}`,
+          type: 'BANK_ACCOUNT',
+          title: 'Bank Details Verification',
+          message: `Verify bank details submitted by ${b.employee.name}.`,
+          date: b.createdAt,
+          link: '/employees',
+        });
+      });
+    }
+
+    // Sort notifications by date desc
+    notifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    res.json({
+      status: 'success',
+      data: {
+        notifications: notifications.slice(0, 10), // Return top 10
+        count: notifications.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
