@@ -3,10 +3,10 @@ import { logger } from '../config/logger';
 
 // Create nodemailer transport using SMTP settings if available
 const createTransport = () => {
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const host = process.env.SMTP_HOST?.trim();
+  const port = parseInt((process.env.SMTP_PORT || '587').trim(), 10);
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim();
 
   if (host && user && pass) {
     logger.info(`SMTP configuration found. Using mailer transport: ${host}:${port}`);
