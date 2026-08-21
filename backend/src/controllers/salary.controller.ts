@@ -337,6 +337,8 @@ export const generatePayroll = async (
     // Generate unique payroll batch number
     const payrollNo = `PAY-${year}${month.toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    const employeeIds = activeEmpWithStructures.map((e) => e.id);
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Create payroll batch
       const payroll = await tx.payroll.create({
@@ -362,6 +364,32 @@ export const generatePayroll = async (
         },
       });
 
+      // Fetch leave requests for all these employees in that month
+      const allLeaveRequests = await tx.leaveRequest.findMany({
+        where: {
+          employeeId: { in: employeeIds },
+          status: 'APPROVED',
+          OR: [
+            {
+              fromDate: { lte: new Date(year, month - 1, totalDaysInMonth, 23, 59, 59) },
+              toDate: { gte: new Date(year, month - 1, 1, 0, 0, 0) },
+            },
+          ],
+        },
+        include: { leaveType: true },
+      });
+
+      // Fetch attendance records for all these employees in that month
+      const allAttendanceRecords = await tx.attendanceRecord.findMany({
+        where: {
+          employeeId: { in: employeeIds },
+          date: {
+            gte: new Date(year, month - 1, 1, 0, 0, 0),
+            lte: new Date(year, month - 1, totalDaysInMonth, 23, 59, 59),
+          },
+        },
+      });
+
       // 2. Create slips
       for (const emp of activeEmpWithStructures) {
         const struct = emp.salaryStructures[0];
@@ -370,31 +398,11 @@ export const generatePayroll = async (
         const totalDeductions = struct.pf + struct.professionalTax + struct.tds;
         const netBefore = grossEarnings - totalDeductions;
 
-        // Fetch leave requests for this employee in that month
-        const leaveRequests = await tx.leaveRequest.findMany({
-          where: {
-            employeeId: emp.id,
-            status: 'APPROVED',
-            OR: [
-              {
-                fromDate: { lte: new Date(year, month - 1, totalDaysInMonth, 23, 59, 59) },
-                toDate: { gte: new Date(year, month - 1, 1, 0, 0, 0) },
-              },
-            ],
-          },
-          include: { leaveType: true },
-        });
+        // Filter leave requests for this employee in-memory
+        const leaveRequests = allLeaveRequests.filter((l) => l.employeeId === emp.id);
 
-        // Fetch attendance records for this employee in that month
-        const attendanceRecords = await tx.attendanceRecord.findMany({
-          where: {
-            employeeId: emp.id,
-            date: {
-              gte: new Date(year, month - 1, 1, 0, 0, 0),
-              lte: new Date(year, month - 1, totalDaysInMonth, 23, 59, 59),
-            },
-          },
-        });
+        // Filter attendance records for this employee in-memory
+        const attendanceRecords = allAttendanceRecords.filter((a) => a.employeeId === emp.id);
 
         let lwpDays = 0;
         let absentDays = 0;
@@ -491,6 +499,9 @@ export const generatePayroll = async (
       }
 
       return payroll;
+    }, {
+      maxWait: 10000,
+      timeout: 60000,
     });
 
     res.status(201).json({ status: 'success', data: result });
