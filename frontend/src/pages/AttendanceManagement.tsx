@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { api } from '../services/api';
+import { api, getBackendUrl } from '../services/api';
 import {
   Clock,
   MapPin,
@@ -16,7 +16,8 @@ import {
   Search,
   RefreshCw,
   Eye,
-  Plus
+  Plus,
+  X
 } from 'lucide-react';
 import '../styles/attendance.css';
 
@@ -67,6 +68,13 @@ interface AttendanceConfig {
   selfieRequired: boolean;
 }
 
+const getSelfieUrl = (path: string) => {
+  if (!path) return '';
+  const cleanPath = path.replace(/\\/g, '/');
+  const fileName = cleanPath.split('/').pop();
+  return `${getBackendUrl()}/uploads/${fileName}`;
+};
+
 export default function AttendanceManagement() {
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
@@ -101,6 +109,7 @@ export default function AttendanceManagement() {
   const [isWithinRadius, setIsWithinRadius] = useState<boolean | null>(null);
   const [myAllowWFH, setMyAllowWFH] = useState<boolean>(false);
   const [showManualModal, setShowManualModal] = useState(false);
+  const [viewingSelfieRecord, setViewingSelfieRecord] = useState<AttendanceRecord | null>(null);
   const [manualEmpId, setManualEmpId] = useState('');
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualCheckIn, setManualCheckIn] = useState('09:00');
@@ -1119,9 +1128,13 @@ export default function AttendanceManagement() {
                                 </span>
                                 {/* Selfie Status */}
                                 {(record.checkInSelfie || record.checkOutSelfie) && (
-                                  <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1">
+                                  <button
+                                    onClick={() => setViewingSelfieRecord(record)}
+                                    className="bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1 transition-colors cursor-pointer"
+                                    title="Click to view Selfie"
+                                  >
                                     <Camera className="w-2.5 h-2.5" /> Selfie
-                                  </span>
+                                  </button>
                                 )}
                               </>
                             )}
@@ -1420,6 +1433,82 @@ export default function AttendanceManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Selfie Viewer Modal */}
+      {viewingSelfieRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-2xl shadow-2xl relative text-left text-slate-800">
+            <button 
+              onClick={() => setViewingSelfieRecord(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+              <Camera className="w-5 h-5 text-indigo-600" />
+              Selfie Verifications — {viewingSelfieRecord.employee?.name}
+            </h3>
+            <p className="text-xs text-slate-500 mb-6">
+              Employee Code: {viewingSelfieRecord.employee?.employeeCode} | Date: {new Date(viewingSelfieRecord.date).toLocaleDateString()}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Check-In Selfie */}
+              <div className="flex flex-col items-center border border-slate-100 rounded-xl p-4 bg-slate-50">
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Check-In Selfie</span>
+                {viewingSelfieRecord.checkInSelfie ? (
+                  <>
+                    <img 
+                      src={getSelfieUrl(viewingSelfieRecord.checkInSelfie)} 
+                      alt="Check-in Selfie" 
+                      className="w-full h-64 object-cover rounded-lg border border-slate-200 shadow-sm"
+                    />
+                    <span className="text-xs text-slate-500 mt-2 font-medium">
+                      Time: {new Date(viewingSelfieRecord.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </>
+                ) : (
+                  <div className="w-full h-64 flex items-center justify-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg bg-white">
+                    No selfie captured for check-in
+                  </div>
+                )}
+              </div>
+
+              {/* Check-Out Selfie */}
+              <div className="flex flex-col items-center border border-slate-100 rounded-xl p-4 bg-slate-50">
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Check-Out Selfie</span>
+                {viewingSelfieRecord.checkOutSelfie ? (
+                  <>
+                    <img 
+                      src={getSelfieUrl(viewingSelfieRecord.checkOutSelfie)} 
+                      alt="Check-out Selfie" 
+                      className="w-full h-64 object-cover rounded-lg border border-slate-200 shadow-sm"
+                    />
+                    <span className="text-xs text-slate-500 mt-2 font-medium">
+                      Time: {viewingSelfieRecord.checkOutTime ? new Date(viewingSelfieRecord.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
+                    </span>
+                  </>
+                ) : (
+                  <div className="w-full h-64 flex items-center justify-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg bg-white">
+                    No selfie captured for check-out
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setViewingSelfieRecord(null)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Close View
+              </button>
+            </div>
           </div>
         </div>
       )}
