@@ -563,6 +563,26 @@ Fixed layout squeeze / overflow clipping in the User Directory page table Action
 
 ---
 
+### ✅ Phase 24 — Authentication Security & Forgot Password OTP Flow `[COMPLETE]`
+
+**Overview:**
+Implemented a secure and responsive Forgot Password flow utilizing dynamic 6-digit numeric One-Time Passwords (OTPs) sent directly to users' registered email addresses.
+
+**Key Technical Details:**
+- **Database Schema Enhancements:** Added optional `otpCode` and `otpExpires` fields to the `User` database model in `schema.prisma` and applied the migration.
+- **Backend Reset API Endpoints:** Built two public endpoints in `auth.controller.ts` and registered them in `auth.routes.ts`:
+  - `POST /auth/forgot-password`: Validates email, generates a random 6-digit OTP code, sets a 10-minute validity expiry timestamp, and triggers sending the OTP.
+  - `POST /auth/reset-password`: Performs multi-stage validation checks (email exists, user account is active, OTP matches, and OTP is within 10m validity window), hashes the new password using `bcrypt` (12 rounds), updates the credentials in the DB, clears active OTP tokens, and registers a secure audit log trace.
+- **Mailer Utility Module:** Created a reusable mailer interface `mailer.ts` using `nodemailer` that supports SMTP server settings (host, port, auth) dynamically loaded from the active `.env` file, with a console logger fallback for local development environments.
+- **3-Step UI Wizard Modal:** Designed and integrated a responsive password reset wizard popup modal inside `Login.tsx` that walks users through:
+  - **Step 1 (Send OTP):** Collects registered email address with client validation.
+  - **Step 2 (Verify & Reset):** Validates the 6-digit numeric OTP code alongside new password security inputs.
+  - **Step 3 (Success):** Displays a success status validation and returns the user to the log in panel.
+
+**Verified:** Checked both frontend and backend compilation cleanly with zero TypeScript errors (`npx tsc --noEmit`).
+
+---
+
 ## 🏆 ALL PHASES & MODULES FULLY UNLOCKED, IMPLEMENTED & VERIFIED! 🏆
 
 ---

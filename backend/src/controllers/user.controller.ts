@@ -5,6 +5,7 @@ import { prisma } from '../config/database';
 import { sendSuccess } from '../utils/apiResponse';
 import { BadRequestError, ForbiddenError, NotFoundError, ConflictError } from '../utils/errors';
 import { generateNextEmployeeCode } from '../utils/employeeCode';
+import { sendWelcomeEmail } from '../utils/mailer';
 
 const createUserSchema = z.object({
   name: z.string().optional(),
@@ -275,6 +276,19 @@ export const createUser = async (
       },
       201
     );
+
+    // Send welcome email with login credentials (non-blocking)
+    prisma.company.findUnique({ where: { id: companyId } })
+      .then((company) => {
+        sendWelcomeEmail(
+          email,
+          name || email.split('@')[0],
+          password,
+          role.name,
+          company || undefined
+        ).catch(() => {});
+      })
+      .catch(() => {});
   } catch (err) {
     next(err);
   }

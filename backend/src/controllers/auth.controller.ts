@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { prisma } from '../config/database';
 import { sendSuccess } from '../utils/apiResponse';
 import { BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError } from '../utils/errors';
+import { sendOTPEmail } from '../utils/mailer';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Email or Phone is required'),
@@ -477,5 +478,115 @@ export const getNotifications = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+const resetPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  otp: z.string().length(6, 'OTP must be exactly 6 digits'),
+  newPassword: z.string().min(6, 'Password must be at least 6 characters long'),
+});
+
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user || user.status !== 'ACTIVE') {
+      throw new NotFoundError('No active user account found with this email address');
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+    // Save to User
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otpCode: otp,
+        otpExpires,
+      },
+    });
+
+    // Send email
+    await sendOTPEmail(email, otp);
+
+    sendSuccess(res, 'OTP has been sent to your registered email address');
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email, otp, newPassword } = resetPasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user || user.status !== 'ACTIVE') {
+      throw new NotFoundError('No active user account found with this email address');
+    }
+
+    if (!user.otpCode || !user.otpExpires) {
+      throw new BadRequestError('No active password reset request found for this account');
+    }
+
+    // Verify OTP code
+    if (user.otpCode !== otp) {
+      throw new BadRequestError('Invalid OTP code');
+    }
+
+    // Verify expiry
+    if (new Date() > new Date(user.otpExpires)) {
+      throw new BadRequestError('OTP code has expired. Please request a new one.');
+    }
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 12);
+
+    // Update user record
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: newPasswordHash,
+        otpCode: null,
+        otpExpires: null,
+      },
+    });
+
+    // Write audit log
+    await prisma.auditLog.create({
+      data: {
+        companyId: user.companyId,
+        userId: user.id,
+        module: 'AUTH',
+        recordId: user.id,
+        action: 'PASSWORD_RESET_OTP',
+        ipAddress: req.ip || '127.0.0.1',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      },
+    });
+
+    sendSuccess(res, 'Your password has been successfully reset');
+  } catch (err) {
+    next(err);
   }
 };

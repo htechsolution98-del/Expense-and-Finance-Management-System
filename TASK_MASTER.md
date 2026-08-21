@@ -361,6 +361,7 @@
 - [x] Implement mobile web (mweb) responsiveness: hide the sidebar by default on mobile devices, and introduce a sliding drawer menu triggered by a new hamburger menu button in the Header.
 - [x] Activate the notification icon in the Header: create backend route `/auth/notifications` returning role-specific pending expenses, advances, leaves, and bank accounts, and render an interactive dropdown feed on the frontend.
 - [x] Add click-to-view selfie viewer: convert the static Selfie label badge in AttendanceManagement.tsx table row into a clickable button and render a popup modal showing check-in and check-out photos.
+- [x] Implement Forgot Password OTP flow: add otpCode and otpExpires optional fields to User model in schema.prisma, create forgot-password and reset-password routes and controller endpoints in backend, write mailer.ts to handle sending SMTP emails or logging to console, and render a 3-step password reset modal in Login.tsx.
 
 
 
