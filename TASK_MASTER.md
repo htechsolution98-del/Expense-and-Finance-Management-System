@@ -359,6 +359,7 @@
 - [x] Remove the redundant "Deactivate" / "Activate" button from the table Actions column inside `Users.tsx` to streamline the user management interface controls.
 - [x] Optimize payroll generation database queries inside `salary.controller.ts` by pulling leave requests and attendance lookups outside the loop (batching queries using `employeeId: { in: employeeIds }`), and increase the Prisma interactive transaction timeout limit to `60000ms` (60 seconds) to prevent production 500 database transaction timeouts on Render.
 - [x] Implement mobile web (mweb) responsiveness: hide the sidebar by default on mobile devices, and introduce a sliding drawer menu triggered by a new hamburger menu button in the Header.
+- [x] Activate the notification icon in the Header: create backend route `/auth/notifications` returning role-specific pending expenses, advances, leaves, and bank accounts, and render an interactive dropdown feed on the frontend.
 
 
 
