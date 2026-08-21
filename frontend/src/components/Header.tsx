@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, Building, Bell, Key, X } from 'lucide-react';
+import { LogOut, User, Building, Bell, Key, X, Menu } from 'lucide-react';
 import { api } from '../services/api';
 
 interface HeaderProps {
   title: string;
+  onMenuClick?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title }) => {
+export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
   const navigate = useNavigate();
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : { email: 'admin@company.com', role: 'SUPER_ADMIN' };
@@ -93,6 +94,17 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-[var(--header-bg)] border-b border-[var(--header-border)] px-6 py-4 flex items-center justify-between shadow-sm">
+      {/* Hamburger menu button for mobile screens */}
+      {onMenuClick && (
+        <button 
+          onClick={onMenuClick}
+          className="lg:hidden mr-4 p-1.5 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+          title="Open Menu"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+      )}
+
       {/* Dynamic Title */}
       <div className="min-w-0 flex-1 mr-4">
         <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)] truncate">{title}</h1>

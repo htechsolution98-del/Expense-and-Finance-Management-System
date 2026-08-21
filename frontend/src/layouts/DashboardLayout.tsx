@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { Header } from '../components/Header';
@@ -6,6 +6,7 @@ import { api } from '../services/api';
 
 export const DashboardLayout: React.FC = () => {
   const location = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     const refreshProfile = async () => {
@@ -48,11 +49,14 @@ export const DashboardLayout: React.FC = () => {
   return (
     <div className="flex w-full h-screen bg-[var(--background)] text-[var(--text-primary)] overflow-hidden">
       {/* Sidebar Navigation */}
-      <Sidebar />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <Header title={getHeaderTitle(location.pathname)} />
+        <Header 
+          title={getHeaderTitle(location.pathname)} 
+          onMenuClick={() => setIsSidebarOpen(true)} 
+        />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto">
           <Outlet />

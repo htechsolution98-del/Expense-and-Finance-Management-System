@@ -15,7 +15,8 @@ import {
   Settings,
   Calendar,
   Clock,
-  Megaphone
+  Megaphone,
+  X
 } from 'lucide-react';
 
 // Helper to read user from localStorage
@@ -24,7 +25,12 @@ const readUser = () => {
   return userString ? JSON.parse(userString) : { permissions: [], role: '' };
 };
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const activeClass = "flex items-center gap-3 px-4 py-2 rounded-xl bg-[var(--sidebar-active-bg)] border-l-4 border-[var(--primary)] text-[var(--sidebar-active-text)] font-semibold shadow-inner transition-all duration-200";
   const inactiveClass = "flex items-center gap-3 px-4 py-2 rounded-xl text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-hover-text)] transition-all duration-200";
   const disabledClass = "flex items-center justify-between px-4 py-2 rounded-xl text-slate-600 cursor-not-allowed select-none";
@@ -228,25 +234,36 @@ export const Sidebar: React.FC = () => {
     }
   ];
 
-  return (
-    <aside className="w-72 h-screen sticky top-0 flex flex-col bg-[var(--sidebar)] border-r border-slate-800">
+  const renderSidebarContent = (showCloseButton: boolean) => (
+    <>
       {/* Brand logo */}
-      <div className="px-8 py-5 border-b border-slate-800 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[var(--primary)] to-[var(--primary-hover)] flex items-center justify-center font-black text-white text-lg tracking-wider shadow-lg shadow-emerald-500/25">
-          Ω
+      <div className="px-8 py-5 border-b border-slate-800 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[var(--primary)] to-[var(--primary-hover)] flex items-center justify-center font-black text-white text-lg tracking-wider shadow-lg shadow-emerald-500/25">
+            Ω
+          </div>
+          <div>
+            <span className="font-extrabold text-lg text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight">
+              ANTIGRAVITY
+            </span>
+            <span className="block text-[9px] font-bold tracking-widest text-[var(--primary)] uppercase mt-0.5">
+              FINANCIAL CONTROL
+            </span>
+          </div>
         </div>
-        <div>
-          <span className="font-extrabold text-lg text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight">
-            ANTIGRAVITY
-          </span>
-          <span className="block text-[9px] font-bold tracking-widest text-[var(--primary)] uppercase mt-0.5">
-            FINANCIAL CONTROL
-          </span>
-        </div>
+        {showCloseButton && onClose && (
+          <button 
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Close Menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation menu */}
-      <nav className="flex-1 px-4 py-4 space-y-4 overflow-y-auto">
+      <nav className="flex-1 px-4 py-4 space-y-4 overflow-y-auto" onClick={showCloseButton ? onClose : undefined}>
         {sections.map((sec) => {
           const secVisibleItems = sec.items.filter((item) => item.visible);
           if (secVisibleItems.length === 0) return null;
@@ -293,6 +310,32 @@ export const Sidebar: React.FC = () => {
           Local Development Mode
         </p>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar (visible on large screens only) */}
+      <aside className="hidden lg:flex w-72 h-screen sticky top-0 flex-col bg-[var(--sidebar)] border-r border-slate-800 shrink-0">
+        {renderSidebarContent(false)}
+      </aside>
+
+      {/* Mobile Sidebar Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Mobile Sidebar Drawer */}
+      <aside 
+        className={`fixed top-0 bottom-0 left-0 z-50 w-72 flex flex-col bg-[var(--sidebar)] border-r border-slate-800 transform transition-transform duration-300 ease-in-out lg:hidden ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {renderSidebarContent(true)}
+      </aside>
+    </>
   );
 };
