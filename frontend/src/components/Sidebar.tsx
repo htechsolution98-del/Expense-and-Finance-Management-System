@@ -244,7 +244,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           </div>
           <div>
             <span className="font-extrabold text-lg text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight">
-              ANTIGRAVITY
+              KaryaNiyantrak
             </span>
             <span className="block text-[9px] font-bold tracking-widest text-[var(--primary)] uppercase mt-0.5">
               FINANCIAL CONTROL

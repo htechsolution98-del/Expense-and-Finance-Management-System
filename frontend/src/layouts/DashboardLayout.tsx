@@ -66,7 +66,7 @@ export const DashboardLayout: React.FC = () => {
         <footer className="bg-[var(--card)] text-[var(--text-secondary)] px-8 py-5 border-t border-[var(--card-border)] text-center text-xs font-semibold mt-auto">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-              <span>© {new Date().getFullYear()} Antigravity Financial Control Portal. All rights reserved.</span>
+              <span>© {new Date().getFullYear()} KaryaNiyantrak Financial Control Portal. All rights reserved.</span>
             </div>
             <div className="flex gap-4">
               <a href="#" className="text-[var(--primary)] hover:underline">Privacy Policy</a>
