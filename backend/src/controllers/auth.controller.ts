@@ -520,8 +520,8 @@ export const forgotPassword = async (
       },
     });
 
-    // Send email
-    await sendOTPEmail(email, otp);
+    // Send email in background — respond immediately, don't block on SMTP
+    sendOTPEmail(email, otp).catch(() => {});
 
     sendSuccess(res, 'OTP has been sent to your registered email address');
   } catch (err) {

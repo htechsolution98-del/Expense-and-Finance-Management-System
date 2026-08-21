@@ -14,6 +14,9 @@ const createTransport = () => {
       host,
       port,
       secure: port === 465, // true for 465, false for other ports
+      connectionTimeout: 5000,  // 5 seconds max — prevent slow response on blocked SMTP
+      socketTimeout: 5000,
+      greetingTimeout: 5000,
       auth: {
         user,
         pass,
