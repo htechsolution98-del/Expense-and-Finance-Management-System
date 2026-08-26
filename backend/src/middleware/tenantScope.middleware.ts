@@ -24,7 +24,20 @@ export const tenantScopeMiddleware = (req: Request, _res: Response, next: NextFu
       next(new ForbiddenError('Tenant company ID missing in token context'));
       return;
     }
-    req.companyId = req.user.companyId;
+
+    // Check if the user is a Global Master Admin (SUPER_ADMIN of seed company '00000000-0000-0000-0000-000000000000')
+    const isGlobalMasterAdmin =
+      req.user.role === 'SUPER_ADMIN' &&
+      req.user.companyId === '00000000-0000-0000-0000-000000000000';
+
+    const switchCompanyHeader = req.headers['x-switch-company'];
+
+    if (isGlobalMasterAdmin && switchCompanyHeader && typeof switchCompanyHeader === 'string' && switchCompanyHeader.trim() !== '') {
+      req.companyId = switchCompanyHeader;
+      req.user.companyId = switchCompanyHeader;
+    } else {
+      req.companyId = req.user.companyId;
+    }
   }
   next();
 };

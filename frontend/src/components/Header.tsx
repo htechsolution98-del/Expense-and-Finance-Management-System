@@ -115,8 +115,34 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
     }
   };
 
+  const switchCompanyId = localStorage.getItem('switch_company_id');
+
+  const handleExitImpersonation = () => {
+    localStorage.removeItem('switch_company_id');
+    window.location.href = '/master-dashboard';
+  };
+
   return (
-    <header className="sticky top-0 z-40 w-full bg-[var(--header-bg)] border-b border-[var(--header-border)] px-6 py-4 flex items-center justify-between shadow-sm">
+    <>
+      {switchCompanyId && (
+        <div className="w-full bg-amber-500 text-slate-950 px-6 py-2 flex items-center justify-between text-xs font-bold shadow-md z-50">
+          <div className="flex items-center gap-2">
+            <span className="bg-slate-950 text-amber-500 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">
+              Impersonation Active
+            </span>
+            <span>
+              Currently viewing dashboard and ledger records as <strong>{companyInfo?.name || 'Client Tenant'}</strong>.
+            </span>
+          </div>
+          <button
+            onClick={handleExitImpersonation}
+            className="bg-slate-950 text-white px-3 py-1 rounded-md hover:bg-slate-800 transition-colors font-bold cursor-pointer"
+          >
+            Exit Context
+          </button>
+        </div>
+      )}
+      <header className="sticky top-0 z-40 w-full bg-[var(--header-bg)] border-b border-[var(--header-border)] px-6 py-4 flex items-center justify-between shadow-sm">
       {/* Hamburger menu button for mobile screens */}
       {onMenuClick && (
         <button 
@@ -344,5 +370,6 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
         </div>
       )}
     </header>
+    </>
   );
 };

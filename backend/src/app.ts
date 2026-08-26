@@ -24,7 +24,7 @@ app.use(
       'https://expense-and-finance-management-system-1.onrender.com',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'Idempotency-Key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'Idempotency-Key', 'x-switch-company'],
     credentials: true,
   })
 );

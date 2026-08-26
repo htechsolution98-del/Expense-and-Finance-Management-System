@@ -16,6 +16,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    const switchCompanyId = localStorage.getItem('switch_company_id');
+    if (switchCompanyId) {
+      config.headers['x-switch-company'] = switchCompanyId;
+    }
     return config;
   },
   (error) => {

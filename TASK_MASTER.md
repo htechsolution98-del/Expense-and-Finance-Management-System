@@ -352,6 +352,33 @@
 
 ---
 
+### ✅ Phase 24: Authentication Security & Forgot Password OTP Flow `[COMPLETE]`
+- [x] Add optional `otpCode` and `otpExpires` fields to `User` Prisma schema model.
+- [x] Sync Prisma schema and apply database migrations.
+- [x] Create forgot-password and reset-password backend routes and controller endpoints.
+- [x] Write `mailer.ts` mail utility supporting SMTP connection settings and console fallbacks.
+- [x] Implement a 3-step Forgot Password reset wizard modal UI inside frontend `Login.tsx`.
+
+---
+
+### ✅ Phase 25: Multi-Tenant SaaS Master Admin (Super Admin) System `[COMPLETE]`
+- [x] Update CORS allowed headers inside `backend/src/app.ts` to allow `x-switch-company`.
+- [x] Refactor `backend/src/middleware/tenantScope.middleware.ts` to support tenant context switching via header impersonation.
+- [x] Update `backend/src/controllers/auth.controller.ts` to check company status during login and token refresh.
+- [x] Update `backend/src/middleware/auth.middleware.ts` to dynamically reject requests from suspended companies.
+- [x] Create backend system administration controller `backend/src/controllers/system.controller.ts` (lists client companies, toggles active/suspended status, returns summary stats, handles transaction-safe seeding of new companies, updates company profile details, cascade deletes client companies, and resets primary administrator passwords).
+- [x] Create backend system administration routes `backend/src/routes/v1/system.routes.ts` mapping update, cascade delete, and password reset endpoints.
+- [x] Register system routes in the Express version 1 router gateway index.
+- [x] Update Axios request interceptor in `frontend/src/services/api.ts` to forward `x-switch-company` header.
+- [x] Add "System Console" link menu section in `frontend/src/components/Sidebar.tsx` visible strictly to Global Master Admin.
+- [x] Register new administrative routes in `frontend/src/App.tsx`.
+- [x] Build administrative control dashboard `frontend/src/pages/MasterDashboard.tsx` (KPI metrics cards, searchable companies grid, status toggle controls, impersonation switches, company creation modals, details editing modals, and password reset overlays).
+- [x] Integrate context switcher header warning banner and exit button in `frontend/src/components/Header.tsx`.
+- [x] Create and run self-contained integration test suite `backend/scratch/run_system_tests.ts` to assert all flows (creating, listing, status toggles, editing, resetting passwords, and cascade purging) under remote DB latency.
+- [x] Verify compile check type analysis with zero warnings and type errors in both frontend and backend directories.
+
+---
+
 ### ✅ Hotfixes & Maintenance
 - [x] Fix Actions column layout squeeze and overflow clipping inside Users.tsx, remove role restriction on Extra Perms button, and configure a custom info banner for Super Admin target users in the Extra Permissions modal.
 - [x] Remove the `140px` max-width constraint on `table td:last-child` and `table th:last-child` inside `index.css`, replacing it with `max-width: none` and `overflow: visible` to prevent all table action columns across the application from clipping.
@@ -361,7 +388,32 @@
 - [x] Implement mobile web (mweb) responsiveness: hide the sidebar by default on mobile devices, and introduce a sliding drawer menu triggered by a new hamburger menu button in the Header.
 - [x] Activate the notification icon in the Header: create backend route `/auth/notifications` returning role-specific pending expenses, advances, leaves, and bank accounts, and render an interactive dropdown feed on the frontend.
 - [x] Add click-to-view selfie viewer: convert the static Selfie label badge in AttendanceManagement.tsx table row into a clickable button and render a popup modal showing check-in and check-out photos.
-- [x] Implement Forgot Password OTP flow: add otpCode and otpExpires optional fields to User model in schema.prisma, create forgot-password and reset-password routes and controller endpoints in backend, write mailer.ts to handle sending SMTP emails or logging to console, and render a 3-step password reset modal in Login.tsx.
 
+---
 
+### ✅ Phase 26: Subscription, Trial & Expiry System `[COMPLETE]`
+- [x] Add `subscriptionStatus` (String), `trialEndsAt` (DateTime?), and `subscriptionEndsAt` (DateTime?) fields to `schema.prisma` and synchronize database schema via Prisma client generation.
+- [x] Implement backend subscription guard middleware `subscriptionGuard` inside `backend/src/middleware/subscription.middleware.ts` to restrict API operations when trial/subscription runs out.
+- [x] Integrate simulated renewal billing endpoint `POST /api/v1/company/subscribe` inside `backend/src/controllers/company.controller.ts` extending active subscriptions by 30 days.
+- [x] Expose renewal subscription route in `backend/src/routes/v1/company.routes.ts`.
+- [x] Inject subscription variables to `/auth/me` and `/auth/login` session payload objects.
+- [x] Apply the `subscriptionGuard` globally to authenticated workspace router gateway endpoints inside `backend/src/routes/v1/index.ts`.
+- [x] Update company interface definitions, modal form options, and table statistics columns in `frontend/src/pages/MasterDashboard.tsx`.
+- [x] Create glassmorphic payment block overlay modal `frontend/src/components/SubscriptionModal.tsx` triggering simulated subscription extension.
+- [x] Embed verification locks inside `frontend/src/layouts/DashboardLayout.tsx` restricting client access globally upon expiry.
+- [x] Verify type compiler sync with zero errors in both backend and frontend directories (`npx tsc --noEmit`).
 
+---
+
+### ✅ Phase 27: SaaS Subscription Pricing Plans & Dynamic Renewals `[COMPLETE]`
+- [x] Create `SubscriptionPlan` model inside `schema.prisma` and push database updates to PostgreSQL Neon database.
+- [x] Build backend plan CRUD endpoints under `/api/v1/system/plans` (GET, POST, PUT, DELETE) restricted to Global Master Admins.
+- [x] Build backend endpoint `/api/v1/company/plans` to fetch active subscription plans.
+- [x] Modify backend `/company/subscribe` to read the chosen `planId` and compute renewed dates dynamically.
+- [x] Integrate "Subscription Pricing Plans" tab inside `MasterDashboard.tsx` with a CRUD table grid and modal forms.
+- [x] Update client `SubscriptionModal.tsx` renewal lockout modal to fetch active plans, display high-contrast subscription packages selection, and pass the selected `planId` key.
+- [x] Compile check frontend and backend to verify 100% typescript safety.
+- [x] Refine `MasterDashboard.tsx` to include interactive plan status toggle, GST configuration checkbox, and plan metadata in company directory.
+- [x] Add `hasGst` and `subscriptionPlanId` to Prisma models and backend controllers.
+- [x] Refine `SubscriptionModal.tsx` checkout block to display GST labels dynamically based on plan configurations.
+- [x] Integrate Razorpay payment gateway by dynamically creating orders via backend `create-subscription-order` and verifying signatures securely on frontend success webhook inside `SubscriptionModal.tsx`.

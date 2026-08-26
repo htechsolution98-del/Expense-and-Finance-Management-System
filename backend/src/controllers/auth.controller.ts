@@ -75,10 +75,18 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
           { phone: identifier }
         ]
       },
+      include: {
+        company: true
+      }
     });
 
     if (!user) {
       throw new UnauthorizedError('Invalid email/phone or password');
+    }
+
+    // Check if company is suspended/inactive
+    if (user.company.status !== 'ACTIVE') {
+      throw new ForbiddenError('Your company account is suspended or inactive. Please contact system support.');
     }
 
     // Check if user is deactivated
@@ -174,6 +182,9 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
         role,
         permissions,
         employeeId: user.employeeId,
+        subscriptionStatus: user.company.subscriptionStatus,
+        trialEndsAt: user.company.trialEndsAt,
+        subscriptionEndsAt: user.company.subscriptionEndsAt,
       },
     });
   } catch (err) {
@@ -190,7 +201,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction): 
 
     const tokenRecord = await prisma.refreshToken.findUnique({
       where: { token: refreshToken },
-      include: { user: true },
+      include: { user: { include: { company: true } } },
     });
 
     if (!tokenRecord || tokenRecord.expiresAt < new Date() || tokenRecord.revokedAt) {
@@ -198,6 +209,9 @@ export const refresh = async (req: Request, res: Response, next: NextFunction): 
     }
 
     const user = tokenRecord.user;
+    if (user.company.status !== 'ACTIVE') {
+      throw new ForbiddenError('Your company account is suspended or inactive. Please contact system support.');
+    }
     if (user.status !== 'ACTIVE') {
       throw new ForbiddenError('User is deactivated. Please contact your administrator.');
     }
@@ -309,6 +323,9 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
         role,
         permissions,
         employeeId: user.employeeId,
+        subscriptionStatus: user.company.subscriptionStatus,
+        trialEndsAt: user.company.trialEndsAt,
+        subscriptionEndsAt: user.company.subscriptionEndsAt,
       },
     });
   } catch (err) {

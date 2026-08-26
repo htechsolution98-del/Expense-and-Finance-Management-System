@@ -3,26 +3,61 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { Header } from '../components/Header';
 import { api } from '../services/api';
+import { SubscriptionModal } from '../components/SubscriptionModal';
 
 export const DashboardLayout: React.FC = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const userString = localStorage.getItem('user');
+    return userString ? JSON.parse(userString) : {};
+  });
+
+  const refreshProfile = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      if (response.data?.success && response.data?.data?.user) {
+        const updatedUser = response.data.data.user;
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setCurrentUser(updatedUser);
+        // Notify Sidebar instantly — no logout needed after permission changes
+        window.dispatchEvent(new Event('user-permissions-updated'));
+      }
+    } catch (err) {
+      // Silently catch refresh failures
+    }
+  };
 
   useEffect(() => {
-    const refreshProfile = async () => {
-      try {
-        const response = await api.get('/auth/me');
-        if (response.data?.success && response.data?.data?.user) {
-          localStorage.setItem('user', JSON.stringify(response.data.data.user));
-          // Notify Sidebar instantly — no logout needed after permission changes
-          window.dispatchEvent(new Event('user-permissions-updated'));
-        }
-      } catch (err) {
-        // Silently catch refresh failures
-      }
-    };
     refreshProfile();
   }, [location.pathname]);
+
+  const handleSubscriptionSuccess = () => {
+    refreshProfile();
+  };
+
+  // Determine if company subscription has expired
+  const isGlobalMasterAdmin = currentUser.role === 'SUPER_ADMIN' && currentUser.companyId === '00000000-0000-0000-0000-000000000000';
+  
+  const isSubscriptionExpired = (() => {
+    if (isGlobalMasterAdmin) return false;
+    
+    const { subscriptionStatus, trialEndsAt, subscriptionEndsAt } = currentUser;
+    if (!subscriptionStatus) return false; // Fail-safe
+    
+    const now = new Date();
+    if (subscriptionStatus === 'ACTIVE') {
+      if (subscriptionEndsAt && new Date(subscriptionEndsAt) > now) {
+        return false;
+      }
+    } else if (subscriptionStatus === 'TRIAL') {
+      if (trialEndsAt && new Date(trialEndsAt) > now) {
+        return false;
+      }
+    }
+    
+    return true;
+  })();
 
   // Determine header title based on current path
   const getHeaderTitle = (pathname: string) => {
@@ -61,6 +96,14 @@ export const DashboardLayout: React.FC = () => {
         <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto">
           <Outlet />
         </main>
+
+        {/* Render overlay modal blocking standard workspace operations if expired */}
+        {isSubscriptionExpired && (
+          <SubscriptionModal 
+            companyName={currentUser.companyName || 'your company'} 
+            onSuccess={handleSubscriptionSuccess} 
+          />
+        )}
 
         {/* Footer */}
         <footer className="bg-[var(--card)] text-[var(--text-secondary)] px-8 py-5 border-t border-[var(--card-border)] text-center text-xs font-semibold mt-auto">

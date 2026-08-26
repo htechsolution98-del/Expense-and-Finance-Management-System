@@ -18,6 +18,7 @@ import PaymentCategories from './pages/PaymentCategories';
 import ApprovalRules from './pages/ApprovalRules';
 import Users from './pages/Users';
 import { CompanySettings } from './pages/CompanySettings';
+import { MasterDashboard } from './pages/MasterDashboard';
 import LeaveManagement from './pages/LeaveManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
 import AttendanceConfig from './pages/AttendanceConfig';
@@ -59,6 +60,7 @@ const App: React.FC = () => {
               <Route path="/payment-categories" element={<PaymentCategories />} />
             </Route>
             <Route element={<ProtectedRoute requiredPermission="SUPER_ADMIN_ONLY" />}>
+              <Route path="/master-dashboard" element={<MasterDashboard />} />
               <Route path="/approval-rules" element={<ApprovalRules />} />
               <Route path="/company-settings" element={<CompanySettings />} />
               <Route path="/attendance-config" element={<AttendanceConfig />} />

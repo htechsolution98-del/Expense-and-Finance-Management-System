@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
-import { UnauthorizedError } from '../utils/errors';
+import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 import { prisma } from '../config/database';
 
 interface DecodedToken {
@@ -27,6 +27,7 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
     prisma.user.findUnique({
       where: { id: decoded.sub },
       include: {
+        company: true,
         userRoles: {
           include: {
             role: {
@@ -49,6 +50,12 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
     }).then((dbUser) => {
       if (!dbUser || dbUser.status === 'DELETED' || dbUser.status === 'INACTIVE') {
         next(new UnauthorizedError('User account is invalid or deactivated'));
+        return;
+      }
+
+      // Block requests if company is suspended, except for Global Master Admin company
+      if (dbUser.companyId !== '00000000-0000-0000-0000-000000000000' && dbUser.company.status !== 'ACTIVE') {
+        next(new ForbiddenError('Your company account is suspended or inactive. Please contact support.'));
         return;
       }
 

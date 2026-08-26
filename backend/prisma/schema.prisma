@@ -8,18 +8,22 @@ generator client {
 }
 
 model Company {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String?
-  email     String?
-  address   String?
-  logo      String?
-  gstin     String?
-  timezone  String   @default("UTC")
-  currency  String   @default("INR")
-  status    String   @default("ACTIVE")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                 String    @id @default(uuid())
+  name               String
+  phone              String?
+  email              String?
+  address            String?
+  logo               String?
+  gstin              String?
+  timezone           String    @default("UTC")
+  currency           String    @default("INR")
+  status             String    @default("ACTIVE")
+  subscriptionStatus String    @default("TRIAL") @map("subscription_status")
+  trialEndsAt        DateTime? @map("trial_ends_at")
+  subscriptionEndsAt DateTime? @map("subscription_ends_at")
+  subscriptionPlanId String?   @map("subscription_plan_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   users                User[]
   auditLogs            AuditLog[]
@@ -49,40 +53,43 @@ model Company {
   attendanceConfigs    AttendanceConfig[]
   attendanceRecords    AttendanceRecord[]
   announcements        Announcement[]
+  subscriptionPlan     SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id], onDelete: SetNull)
+
+  subscriptionPayments SubscriptionPayment[]
 
   @@map("companies")
 }
 
 model User {
-  id           String   @id @default(uuid())
-  companyId    String   @map("company_id")
+  id           String    @id @default(uuid())
+  companyId    String    @map("company_id")
   name         String?
-  phone        String?  @unique
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  employeeId   String?  @map("employee_id")
-  status       String   @default("ACTIVE")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  otpCode      String?  @map("otp_code")
+  phone        String?   @unique
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  employeeId   String?   @map("employee_id")
+  status       String    @default("ACTIVE")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  otpCode      String?   @map("otp_code")
   otpExpires   DateTime? @map("otp_expires")
 
-  company           Company               @relation(fields: [companyId], references: [id])
-  employee          Employee?             @relation(fields: [employeeId], references: [id])
-  refreshTokens     RefreshToken[]
-  auditLogs         AuditLog[]
-  userRoles         UserRole[]
-  userPermissions   UserPermission[]
-  transactions      Transaction[]
-  expenses          Expense[]
-  approvalSteps     ApprovalStep[]
-  advancesCreated   Advance[]             @relation("AdvanceCreator")
-  bankVerifications EmployeeBankAccount[] @relation("BankVerifier")
-  approvedLeaves    LeaveRequest[]        @relation("LeaveApprover")
-  rejectedLeaves    LeaveRequest[]        @relation("LeaveRejector")
-  cancelledLeaves   LeaveRequest[]        @relation("LeaveCanceller")
-  leaveApprovals    LeaveApproval[]
-  announcementsCreated Announcement[]      @relation("AnnouncementCreator")
+  company              Company               @relation(fields: [companyId], references: [id])
+  employee             Employee?             @relation(fields: [employeeId], references: [id])
+  refreshTokens        RefreshToken[]
+  auditLogs            AuditLog[]
+  userRoles            UserRole[]
+  userPermissions      UserPermission[]
+  transactions         Transaction[]
+  expenses             Expense[]
+  approvalSteps        ApprovalStep[]
+  advancesCreated      Advance[]             @relation("AdvanceCreator")
+  bankVerifications    EmployeeBankAccount[] @relation("BankVerifier")
+  approvedLeaves       LeaveRequest[]        @relation("LeaveApprover")
+  rejectedLeaves       LeaveRequest[]        @relation("LeaveRejector")
+  cancelledLeaves      LeaveRequest[]        @relation("LeaveCanceller")
+  leaveApprovals       LeaveApproval[]
+  announcementsCreated Announcement[]        @relation("AnnouncementCreator")
 
   @@map("users")
 }
@@ -260,19 +267,19 @@ model Employee {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  company          Company               @relation(fields: [companyId], references: [id])
-  department       Department?           @relation(fields: [departmentId], references: [id])
-  designation      Designation?          @relation(fields: [designationId], references: [id])
-  transactions     Transaction[]
-  expenses         Expense[]
-  salaryStructures SalaryStructure[]
-  payrollItems     PayrollItem[]
-  advances         Advance[]
-  bankAccounts     EmployeeBankAccount[]
-  users            User[]
-  leaveBalances       LeaveBalance[]
-  leaveRequests       LeaveRequest[]
-  attendanceRecords   AttendanceRecord[]
+  company           Company               @relation(fields: [companyId], references: [id])
+  department        Department?           @relation(fields: [departmentId], references: [id])
+  designation       Designation?          @relation(fields: [designationId], references: [id])
+  transactions      Transaction[]
+  expenses          Expense[]
+  salaryStructures  SalaryStructure[]
+  payrollItems      PayrollItem[]
+  advances          Advance[]
+  bankAccounts      EmployeeBankAccount[]
+  users             User[]
+  leaveBalances     LeaveBalance[]
+  leaveRequests     LeaveRequest[]
+  attendanceRecords AttendanceRecord[]
 
   @@unique([companyId, employeeCode])
   @@map("employees")
@@ -357,10 +364,10 @@ model Voucher {
   accountId   String? @map("account_id")
   paymentMode String  @default("CASH") @map("payment_mode")
   referenceNo String? @map("reference_no")
-  status        String   @default("COMPLETED") // "PENDING_APPROVAL", "APPROVED", "COMPLETED", "REJECTED"
-  
-  createdBy     String   @default("system") @map("created_by")
-  approvedBy    String?  @map("approved_by")
+  status      String  @default("COMPLETED") // "PENDING_APPROVAL", "APPROVED", "COMPLETED", "REJECTED"
+
+  createdBy   String  @default("system") @map("created_by")
+  approvedBy  String? @map("approved_by")
   disbursedBy String? @map("disbursed_by")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -548,28 +555,28 @@ model Payroll {
 }
 
 model PayrollItem {
-  id              String    @id @default(uuid())
-  payrollId       String    @map("payroll_id")
-  employeeId      String    @map("employee_id")
-  basic           Float
-  hra             Float
-  conveyance      Float
-  medical         Float
-  special         Float
-  pf              Float
-  professionalTax Float     @map("professional_tax")
-  tds             Float
-  grossEarnings   Float     @map("gross_earnings")
-  totalDeductions Float     @map("total_deductions")
-  netSalary       Float     @map("net_salary")
-  lwpDays         Float     @default(0.0) @map("lwp_days")
-  absentDays      Float     @default(0.0) @map("absent_days")
-  halfDays        Float     @default(0.0) @map("half_days")
-  unpaidDeductions Float    @default(0.0) @map("unpaid_deductions")
-  status          String    @default("PENDING") // "PENDING", "PAID"
-  paidAccountId   String?   @map("paid_account_id")
-  paidAt          DateTime? @map("paid_at")
-  transactionId   String?   @map("transaction_id")
+  id               String    @id @default(uuid())
+  payrollId        String    @map("payroll_id")
+  employeeId       String    @map("employee_id")
+  basic            Float
+  hra              Float
+  conveyance       Float
+  medical          Float
+  special          Float
+  pf               Float
+  professionalTax  Float     @map("professional_tax")
+  tds              Float
+  grossEarnings    Float     @map("gross_earnings")
+  totalDeductions  Float     @map("total_deductions")
+  netSalary        Float     @map("net_salary")
+  lwpDays          Float     @default(0.0) @map("lwp_days")
+  absentDays       Float     @default(0.0) @map("absent_days")
+  halfDays         Float     @default(0.0) @map("half_days")
+  unpaidDeductions Float     @default(0.0) @map("unpaid_deductions")
+  status           String    @default("PENDING") // "PENDING", "PAID"
+  paidAccountId    String?   @map("paid_account_id")
+  paidAt           DateTime? @map("paid_at")
+  transactionId    String?   @map("transaction_id")
 
   payroll      Payroll       @relation(fields: [payrollId], references: [id], onDelete: Cascade)
   employee     Employee      @relation(fields: [employeeId], references: [id])
@@ -668,21 +675,21 @@ model LeaveType {
 }
 
 model LeavePolicy {
-  id                    String   @id @default(uuid())
-  companyId             String   @map("company_id")
-  name                  String   @default("Default Leave Policy")
-  year                  Int      @default(2026)
-  workingDaysOnly       Boolean  @default(true) @map("working_days_only")
-  excludeWeekends       Boolean  @default(true) @map("exclude_weekends")
-  excludeHolidays       Boolean  @default(true) @map("exclude_holidays")
-  advanceNoticeDays     Int      @default(0) @map("advance_notice_days")
-  maxConsecutiveDays    Int?     @map("max_consecutive_days")
+  id                   String   @id @default(uuid())
+  companyId            String   @map("company_id")
+  name                 String   @default("Default Leave Policy")
+  year                 Int      @default(2026)
+  workingDaysOnly      Boolean  @default(true) @map("working_days_only")
+  excludeWeekends      Boolean  @default(true) @map("exclude_weekends")
+  excludeHolidays      Boolean  @default(true) @map("exclude_holidays")
+  advanceNoticeDays    Int      @default(0) @map("advance_notice_days")
+  maxConsecutiveDays   Int?     @map("max_consecutive_days")
   allowNegativeBalance Boolean  @default(false) @map("allow_negative_balance")
-  autoApprove           Boolean  @default(false) @map("auto_approve")
-  customRules           String?  @map("custom_rules")
-  isActive              Boolean  @default(true) @map("is_active")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  autoApprove          Boolean  @default(false) @map("auto_approve")
+  customRules          String?  @map("custom_rules")
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
   company Company @relation(fields: [companyId], references: [id])
 
@@ -690,18 +697,18 @@ model LeavePolicy {
 }
 
 model LeaveBalance {
-  id              String   @id @default(uuid())
-  companyId       String   @map("company_id")
-  employeeId      String   @map("employee_id")
-  leaveTypeId     String   @map("leave_type_id")
-  year            Int      @default(2026)
-  allocated       Float    @default(0.0)
-  used            Float    @default(0.0)
-  pending         Float    @default(0.0)
-  remaining       Float    @default(0.0)
-  carriedForward  Float    @default(0.0) @map("carried_forward")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  companyId      String   @map("company_id")
+  employeeId     String   @map("employee_id")
+  leaveTypeId    String   @map("leave_type_id")
+  year           Int      @default(2026)
+  allocated      Float    @default(0.0)
+  used           Float    @default(0.0)
+  pending        Float    @default(0.0)
+  remaining      Float    @default(0.0)
+  carriedForward Float    @default(0.0) @map("carried_forward")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   company   Company   @relation(fields: [companyId], references: [id])
   employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -712,29 +719,29 @@ model LeaveBalance {
 }
 
 model LeaveRequest {
-  id                String    @id @default(uuid())
-  companyId         String    @map("company_id")
-  leaveNo           String?   @unique @map("leave_no")
-  employeeId        String    @map("employee_id")
-  leaveTypeId       String    @map("leave_type_id")
-  fromDate          DateTime  @map("from_date")
-  toDate            DateTime  @map("to_date")
-  totalDays         Float     @map("total_days")
-  dayType           String    @default("FULL_DAY") @map("day_type") // FULL_DAY, HALF_DAY
-  reason            String
-  attachment        String?
-  status            String    @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
-  appliedAt         DateTime  @default(now()) @map("applied_at")
-  approvedAt        DateTime? @map("approved_at")
-  approvedBy        String?   @map("approved_by")
-  rejectedAt        DateTime? @map("rejected_at")
-  rejectedBy        String?   @map("rejected_by")
-  rejectionReason   String?   @map("rejection_reason")
-  cancelledAt       DateTime? @map("cancelled_at")
-  cancelledBy       String?   @map("cancelled_by")
-  cancellationReason String?  @map("cancellation_reason")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id                 String    @id @default(uuid())
+  companyId          String    @map("company_id")
+  leaveNo            String?   @unique @map("leave_no")
+  employeeId         String    @map("employee_id")
+  leaveTypeId        String    @map("leave_type_id")
+  fromDate           DateTime  @map("from_date")
+  toDate             DateTime  @map("to_date")
+  totalDays          Float     @map("total_days")
+  dayType            String    @default("FULL_DAY") @map("day_type") // FULL_DAY, HALF_DAY
+  reason             String
+  attachment         String?
+  status             String    @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  appliedAt          DateTime  @default(now()) @map("applied_at")
+  approvedAt         DateTime? @map("approved_at")
+  approvedBy         String?   @map("approved_by")
+  rejectedAt         DateTime? @map("rejected_at")
+  rejectedBy         String?   @map("rejected_by")
+  rejectionReason    String?   @map("rejection_reason")
+  cancelledAt        DateTime? @map("cancelled_at")
+  cancelledBy        String?   @map("cancelled_by")
+  cancellationReason String?   @map("cancellation_reason")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   company        Company         @relation(fields: [companyId], references: [id])
   employee       Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -751,7 +758,7 @@ model LeaveApproval {
   id             String   @id @default(uuid())
   leaveRequestId String   @map("leave_request_id")
   approverId     String   @map("approver_id")
-  action         String   // APPROVED, REJECTED
+  action         String // APPROVED, REJECTED
   comments       String?
   actionAt       DateTime @default(now()) @map("action_at")
 
@@ -803,31 +810,31 @@ model AttendanceConfig {
 }
 
 model AttendanceRecord {
-  id               String    @id @default(uuid())
-  companyId        String    @map("company_id")
-  employeeId       String    @map("employee_id")
-  date             DateTime  @map("date")
-  checkInTime      DateTime  @map("check_in_time")
-  checkOutTime     DateTime? @map("check_out_time")
-  checkInLat       Float?    @map("check_in_lat")
-  checkInLng       Float?    @map("check_in_lng")
-  checkOutLat      Float?    @map("check_out_lat")
-  checkOutLng      Float?    @map("check_out_lng")
-  checkInSelfie    String?   @map("check_in_selfie")
-  checkOutSelfie   String?   @map("check_out_selfie")
-  totalWorkMinutes Int?      @map("total_work_minutes")
-  totalBreakMinutes Int?     @map("total_break_minutes")
-  status           String    @default("CHECKED_IN") // CHECKED_IN, CHECKED_OUT, ON_BREAK
-  lateBy           Int?      @map("late_by") // minutes late
-  earlyExitBy      Int?      @map("early_exit_by") // minutes early
-  isWithinGeofence Boolean   @default(true) @map("is_within_geofence")
-  isHalfDay        Boolean   @default(false) @map("is_half_day")
-  checkOutNote     String?   @map("check_out_note") // Optional system note e.g. auto-checkout
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id                String    @id @default(uuid())
+  companyId         String    @map("company_id")
+  employeeId        String    @map("employee_id")
+  date              DateTime  @map("date")
+  checkInTime       DateTime  @map("check_in_time")
+  checkOutTime      DateTime? @map("check_out_time")
+  checkInLat        Float?    @map("check_in_lat")
+  checkInLng        Float?    @map("check_in_lng")
+  checkOutLat       Float?    @map("check_out_lat")
+  checkOutLng       Float?    @map("check_out_lng")
+  checkInSelfie     String?   @map("check_in_selfie")
+  checkOutSelfie    String?   @map("check_out_selfie")
+  totalWorkMinutes  Int?      @map("total_work_minutes")
+  totalBreakMinutes Int?      @map("total_break_minutes")
+  status            String    @default("CHECKED_IN") // CHECKED_IN, CHECKED_OUT, ON_BREAK
+  lateBy            Int?      @map("late_by") // minutes late
+  earlyExitBy       Int?      @map("early_exit_by") // minutes early
+  isWithinGeofence  Boolean   @default(true) @map("is_within_geofence")
+  isHalfDay         Boolean   @default(false) @map("is_half_day")
+  checkOutNote      String?   @map("check_out_note") // Optional system note e.g. auto-checkout
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  company  Company            @relation(fields: [companyId], references: [id])
-  employee Employee           @relation(fields: [employeeId], references: [id])
+  company  Company           @relation(fields: [companyId], references: [id])
+  employee Employee          @relation(fields: [employeeId], references: [id])
   breaks   AttendanceBreak[]
 
   @@unique([employeeId, date])
@@ -848,20 +855,53 @@ model AttendanceBreak {
 }
 
 model Announcement {
-  id          String   @id @default(uuid())
-  companyId   String   @map("company_id")
+  id          String    @id @default(uuid())
+  companyId   String    @map("company_id")
   title       String
   content     String
   attachment  String?
-  targetRoles String?  @map("target_roles")
-  status      String   @default("ACTIVE")
+  targetRoles String?   @map("target_roles")
+  status      String    @default("ACTIVE")
   expiresAt   DateTime? @map("expires_at")
-  createdById String   @map("created_by_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   company   Company @relation(fields: [companyId], references: [id])
   createdBy User    @relation("AnnouncementCreator", fields: [createdById], references: [id])
 
   @@map("announcements")
+}
+
+model SubscriptionPlan {
+  id        String   @id @default(uuid())
+  name      String
+  months    Int
+  price     Float
+  hasGst    Boolean  @default(false) @map("has_gst")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  companies            Company[]
+  subscriptionPayments SubscriptionPayment[]
+
+  @@map("subscription_plans")
+}
+
+model SubscriptionPayment {
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
+  planId           String   @map("plan_id")
+  razorpayOrderId  String   @map("razorpay_order_id")
+  razorpayPaymentId String  @map("razorpay_payment_id")
+  amountPaid       Float    @map("amount_paid")
+  currency         String   @default("INR")
+  status           String   @default("SUCCESS")
+  paidAt           DateTime @default(now()) @map("paid_at")
+
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan    SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@map("subscription_payments")
 }

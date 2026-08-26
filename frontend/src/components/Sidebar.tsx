@@ -63,8 +63,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
   };
 
   const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' || user.role === 'ACCOUNTS' || user.role?.startsWith('ADMIN') || user.role?.startsWith('ACCOUNT');
+  const isGlobalMasterAdmin = user.role === 'SUPER_ADMIN' && user.companyId === '00000000-0000-0000-0000-000000000000';
 
   const sections = [
+    {
+      title: 'SYSTEM CONSOLE',
+      items: [
+        {
+          name: 'Master Dashboard',
+          path: '/master-dashboard',
+          icon: <ShieldAlert className="w-5 h-5" />,
+          enabled: true,
+          visible: isGlobalMasterAdmin
+        }
+      ]
+    },
     {
       title: 'OVERVIEW',
       items: [

@@ -583,6 +583,55 @@ Implemented a secure and responsive Forgot Password flow utilizing dynamic 6-dig
 
 ---
 
+### ✅ Phase 25 — Multi-Tenant SaaS Master Admin (Super Admin) System `[COMPLETE]`
+
+**Overview:**
+Converted the platform into a Multi-Tenant SaaS application by implementing a System Master administrative console, granular company context switching, and active status checks.
+
+**Key Technical Details:**
+- **Context Impersonation Middleware:** Refactored `tenantScopeMiddleware` inside `tenantScope.middleware.ts` to allow a Global Master Admin (belonging to system company `00000000-0000-0000-0000-000000000000` with the `SUPER_ADMIN` role) to override the company context scope by passing the `X-Switch-Company` request header.
+- **Company Suspension Guards:** Added dynamic company status validation inside `auth.controller.ts` (login/refresh) and `auth.middleware.ts` (JWT verification), immediately rejecting logins and operations with a `403 Forbidden` error if the tenant company is suspended or inactive.
+- **System Controllers & Routes:** Implemented `/api/v1/system` routes (`system.routes.ts` & `system.controller.ts`) protected by a `globalMasterAdminOnly` middleware guard to list companies, toggle statuses, return global stats, spawn client companies, update profile details, execute cascade deletions (permanently purging all company-scoped records), and perform administrator password resets.
+- **Frontend Impersonation Client:** Updated `api.ts` to attach the switched company ID dynamically. Added a context switching indicator banner in `Header.tsx` to exit impersonation in 1 click.
+- **Master Console Dashboard:** Built `MasterDashboard.tsx` with system-wide stats, searchable company listings, suspension toggles, seeded client login exposures, custom form modals for updating company details and resetting admin credentials, and cascade deletion alerts.
+
+**Verified:** Both frontend and backend TypeScript compilation checked clean with zero errors (`npx tsc --noEmit`). Integration test suite `scratch/run_system_tests.ts` passed successfully with complete database record cleanup.
+
+***
+
+### ✅ Phase 27 — SaaS Subscription Pricing Plans & Dynamic Renewals `[COMPLETE]`
+
+**Overview:**
+Added dynamic pricing plans, subscription management features, and plan selectors to allow client accounts to renew their workspace subscription duration dynamically.
+
+**Key Technical Details:**
+- **Database Schema**: Added `SubscriptionPlan` model with `id`, `name`, `months`, `price`, `isActive`, and `createdAt` parameters to PostgreSQL Neon database.
+- **Backend CRUD Endpoints**: Implemented system plan management endpoints under `/api/v1/system/plans` (GET, POST, PUT, DELETE) restricted to Global Master Admins, and client lookup endpoint under `/api/v1/company/plans` returning active checkout packages.
+- **Dynamic Renewal Engine**: Refactored backend `/company/subscribe` to read the chosen `planId`, compute subscription end dates (extending from the current date or from now if already expired), and record the transaction.
+- **Master Admin Plan Builder**: Added a "Subscription Pricing Plans" tab inside `MasterDashboard.tsx` with a CRUD table grid and modal form overlays to create, edit, activate, or delete plan records.
+- **Client Checkout Lockout Modal**: Upgraded `SubscriptionModal.tsx` to dynamically query active plans, display high-contrast subscription radio options, and process checkout payments for the selected plan.
+
+**Verified:** Both frontend and backend TypeScript compilation checked clean with zero errors (`npx tsc --noEmit`).
+
+---
+
+
+### ✅ Phase 26 — Subscription, Trial & Expiry System `[COMPLETE]`
+
+**Overview:**
+Implemented a subscription, trial, and expiry system for client companies. Newly registered companies start with a 7-day trial. Expired companies are locked out of standard operations via a backend middleware guard and a frontend premium checkout modal overlay.
+
+**Key Technical Details:**
+- **Database Schema Sync:** Added `subscriptionStatus`, `trialEndsAt`, and `subscriptionEndsAt` fields to the `Company` model in `schema.prisma` and generated the client.
+- **Backend Access Control Middleware:** Created `subscriptionGuard` inside `subscription.middleware.ts` to block requests with a `403 Forbidden` (`SUBSCRIPTION_EXPIRED`) error code if a company's trial or paid subscription dates are in the past. Excluded system, public, and company auth/subscribe endpoints.
+- **Simulated Payment Endpoint:** Added `POST /api/v1/company/subscribe` to set status to `ACTIVE` and extend `subscriptionEndsAt` by 30 days.
+- **Master Admin Editing Panel:** Updated `system.controller.ts` and `MasterDashboard.tsx` to let Master Admins view and update subscription statuses and custom expiry dates.
+- **Frontend Block Overlay:** Embedded a premium renewal modal (`SubscriptionModal.tsx`) inside `DashboardLayout.tsx` which visually blocks the workspace and triggers simulated payments to restore access instantly.
+
+**Verified:** Both frontend and backend TypeScript compilation checked clean with zero errors (`npx tsc --noEmit`).
+
+---
+
 ## 🏆 ALL PHASES & MODULES FULLY UNLOCKED, IMPLEMENTED & VERIFIED! 🏆
 
 ---
