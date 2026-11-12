@@ -102,6 +102,7 @@ export const getMyProfile = async (
       include: {
         department: { select: { name: true } },
         designation: { select: { name: true } },
+        shift: { select: { id: true, name: true, code: true, startTime: true, endTime: true, isNightShift: true } },
         bankAccounts: {
           orderBy: { createdAt: 'desc' },
           take: 1,

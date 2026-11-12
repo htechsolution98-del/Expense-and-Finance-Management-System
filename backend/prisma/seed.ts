@@ -66,6 +66,8 @@ async function main() {
     { name: 'LEAVE_POLICY_MANAGE', description: 'Manage company leave policies' },
     { name: 'ANNOUNCEMENT_VIEW', description: 'View company announcements' },
     { name: 'ANNOUNCEMENT_CREATE', description: 'Create, edit, and delete company announcements' },
+    { name: 'ATTENDANCE_MANUAL_MARK', description: 'Permission to manually mark or adjust attendance for employees' },
+    { name: 'ATTENDANCE_MANAGE', description: 'Permission to manage shifts, settings, and attendance' },
   ];
 
   const dbPermissions: Record<string, string> = {};
@@ -345,6 +347,79 @@ async function main() {
     });
   }
   console.log(`Default Payment Categories seeded: ${defaultPaymentCategories.length} categories`);
+
+  // 10. Seed Default Shifts (General, Morning, Evening, Night for hospitals & 24/7 organizations)
+  const defaultShifts = [
+    {
+      name: 'General Shift',
+      code: 'GEN',
+      startTime: '09:00',
+      endTime: '18:00',
+      graceMinutes: 15,
+      halfDayMinutes: 240,
+      breakDurationMinutes: 60,
+      breakStartTime: '13:00',
+      breakEndTime: '14:00',
+      isNightShift: false,
+      isDefault: true,
+    },
+    {
+      name: 'Morning Shift',
+      code: 'MORN',
+      startTime: '07:00',
+      endTime: '15:00',
+      graceMinutes: 15,
+      halfDayMinutes: 240,
+      breakDurationMinutes: 45,
+      breakStartTime: '11:00',
+      breakEndTime: '11:45',
+      isNightShift: false,
+      isDefault: false,
+    },
+    {
+      name: 'Evening Shift',
+      code: 'EVE',
+      startTime: '15:00',
+      endTime: '23:00',
+      graceMinutes: 15,
+      halfDayMinutes: 240,
+      breakDurationMinutes: 45,
+      breakStartTime: '19:00',
+      breakEndTime: '19:45',
+      isNightShift: false,
+      isDefault: false,
+    },
+    {
+      name: 'Night Shift',
+      code: 'NIGHT',
+      startTime: '23:00',
+      endTime: '07:00',
+      graceMinutes: 15,
+      halfDayMinutes: 240,
+      breakDurationMinutes: 45,
+      breakStartTime: '03:00',
+      breakEndTime: '03:45',
+      isNightShift: true,
+      isDefault: false,
+    },
+  ];
+
+  for (const shift of defaultShifts) {
+    await prisma.shift.upsert({
+      where: {
+        companyId_name: {
+          companyId: defaultCompany.id,
+          name: shift.name,
+        },
+      },
+      update: shift,
+      create: {
+        ...shift,
+        companyId: defaultCompany.id,
+      },
+    });
+  }
+  console.log(`Default Shifts seeded: ${defaultShifts.length} shifts`);
 
   console.log('Database seeding successfully finished!');
 }

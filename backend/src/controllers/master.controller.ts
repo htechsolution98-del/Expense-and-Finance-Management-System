@@ -23,6 +23,7 @@ const createEmployeeSchema = z.object({
   mobile: z.string(),
   email: z.string().email(),
   address: z.string(),
+  shiftId: z.string().optional().nullable(),
 });
 
 const createLoanSchema = z.object({
@@ -152,6 +153,18 @@ export const getEmployees = async (
 
     const employees = await prisma.employee.findMany({
       where: whereClause,
+      include: {
+        shift: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            startTime: true,
+            endTime: true,
+            isNightShift: true,
+          },
+        },
+      },
       orderBy: { name: 'asc' },
     });
     sendSuccess(res, 'Employees retrieved successfully', employees);
@@ -167,7 +180,7 @@ export const createEmployee = async (
 ): Promise<void> => {
   try {
     const companyId = req.companyId!;
-    const { employeeCode, name, joiningDate, mobile, email, address } = createEmployeeSchema.parse(
+    const { employeeCode, name, joiningDate, mobile, email, address, shiftId } = createEmployeeSchema.parse(
       req.body
     );
 
@@ -194,6 +207,10 @@ export const createEmployee = async (
         email,
         address,
         status: 'ACTIVE',
+        shiftId: shiftId || null,
+      },
+      include: {
+        shift: true,
       },
     });
 

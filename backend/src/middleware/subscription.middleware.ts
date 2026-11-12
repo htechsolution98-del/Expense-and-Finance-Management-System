@@ -13,8 +13,8 @@ export const subscriptionGuard = async (
       return next();
     }
 
-    // Skip verification for system master admin company
-    if (companyId === '00000000-0000-0000-0000-000000000000') {
+    // Skip verification for system master admin company or super admin
+    if (companyId === '00000000-0000-0000-0000-000000000000' || req.user?.role === 'SUPER_ADMIN') {
       return next();
     }
 
@@ -34,7 +34,8 @@ export const subscriptionGuard = async (
     const now = new Date();
 
     if (company.subscriptionStatus === 'ACTIVE') {
-      if (company.subscriptionEndsAt && company.subscriptionEndsAt > now) {
+      // If subscriptionEndsAt is null or in the future, it is active
+      if (!company.subscriptionEndsAt || company.subscriptionEndsAt > now) {
         return next();
       }
     } else if (company.subscriptionStatus === 'TRIAL') {

@@ -17,7 +17,8 @@ import {
   HelpCircle,
   Edit2,
   Trash2,
-  Key
+  Key,
+  Clock
 } from 'lucide-react';
 
 interface User {
@@ -28,7 +29,27 @@ interface User {
   role: string;
   status: string;
   createdAt: string;
+  employeeId?: string | null;
   employeeCode?: string | null;
+  shiftId?: string | null;
+  shift?: {
+    id: string;
+    name: string;
+    code?: string | null;
+    startTime: string;
+    endTime: string;
+    isNightShift?: boolean;
+  } | null;
+}
+
+interface ShiftOption {
+  id: string;
+  name: string;
+  code?: string | null;
+  startTime: string;
+  endTime: string;
+  isDefault?: boolean;
+  isNightShift?: boolean;
 }
 
 interface Role {
@@ -101,6 +122,11 @@ const permissionCategories = [
       const [searchQuery, setSearchQuery] = useState('');
       const [usersPage, setUsersPage] = useState(1);
       const usersPerPage = 10;
+
+      // Shifts state
+      const [shifts, setShifts] = useState<ShiftOption[]>([]);
+      const [newUserShiftId, setNewUserShiftId] = useState('');
+      const [editUserShiftId, setEditUserShiftId] = useState('');
 
       // Add user modal state
       const [showAddModal, setShowAddModal] = useState(false);
@@ -183,6 +209,20 @@ const permissionCategories = [
           // Always fetch users
           const usersRes = await api.get('/users');
           setUsers(usersRes.data.data);
+
+          // Fetch company shifts
+          try {
+            const shiftsRes = await api.get('/attendance/shifts');
+            if (shiftsRes.data?.status === 'success' && shiftsRes.data.data) {
+              setShifts(shiftsRes.data.data);
+              const def = shiftsRes.data.data.find((s: ShiftOption) => s.isDefault);
+              if (def) {
+                setNewUserShiftId((prev) => prev || def.id);
+              }
+            }
+          } catch {
+            // Shifts not accessible - ignore
+          }
 
           // Fetch roles and permissions separately - these require ROLE_VIEW
           try {
@@ -339,7 +379,8 @@ const permissionCategories = [
             password: newUserPassword,
             roleName: newUserRole,
             employeeCode: autoGenerateCode ? undefined : newUserEmpCode,
-            autoGenerateCode
+            autoGenerateCode,
+            shiftId: newUserShiftId || undefined,
           });
 
           setShowAddModal(false);
@@ -350,6 +391,8 @@ const permissionCategories = [
           setNewUserRole('');
           setNewUserEmpCode('');
           setAutoGenerateCode(true);
+          const def = shifts.find((s) => s.isDefault);
+          setNewUserShiftId(def ? def.id : '');
           fetchData();
         } catch (err: any) {
           setFormError(err.response?.data?.message || 'Failed to create user account.');
@@ -369,6 +412,7 @@ const permissionCategories = [
             phone: editUserPhone,
             email: editUserEmail,
             employeeCode: editUserEmpCode,
+            shiftId: editUserShiftId || null,
           });
 
           setShowEditUserModal(false);
@@ -674,6 +718,7 @@ const permissionCategories = [
                     <thead>
                       <tr className="border-b border-white/5 bg-[#0e1420]/50 text-gray-400 text-xs font-bold uppercase tracking-wider">
                         <th className="px-6 py-4">User Operator</th>
+                        <th className="px-6 py-4">Assigned Shift</th>
                         <th className="px-6 py-4">Status</th>
                         <th className="px-6 py-4">Access Role</th>
                         <th className="px-6 py-4">Registration Date</th>
@@ -713,6 +758,20 @@ const permissionCategories = [
                                   {user.phone && <span className="text-gray-500 text-[10px] block">📞 {user.phone}</span>}
                                 </div>
                               </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              {user.shift ? (
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${
+                                  user.shift.isNightShift
+                                    ? 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+                                    : 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20'
+                                }`}>
+                                  <Clock className="w-3 h-3" />
+                                  <span>{user.shift.name} ({user.shift.startTime} - {user.shift.endTime})</span>
+                                </span>
+                              ) : (
+                                <span className="text-gray-500 text-xs italic">Default (Company)</span>
+                              )}
                             </td>
                             <td className="px-6 py-4">
                               <button
@@ -779,6 +838,7 @@ const permissionCategories = [
                                             setEditUserPhone(user.phone || '');
                                             setEditUserEmail(user.email || '');
                                             setEditUserEmpCode(user.employeeCode || '');
+                                            setEditUserShiftId(user.shiftId || '');
                                             setShowEditUserModal(true);
                                           }}
                                           className="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 hover:bg-blue-500/10 text-blue-400 hover:text-blue-300 text-xs font-semibold cursor-pointer transition-all"
@@ -1299,6 +1359,24 @@ const permissionCategories = [
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-655 mb-2">
+                    Operational Shift (Hospitals / Multi-Shift)
+                  </label>
+                  <select
+                    value={newUserShiftId}
+                    onChange={(e) => setNewUserShiftId(e.target.value)}
+                    className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none transition-all cursor-pointer"
+                  >
+                    <option value="">-- Company Default Shift --</option>
+                    {shifts.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.startTime} - {s.endTime}) {s.isDefault ? '★ Default' : ''} {s.isNightShift ? '🌙 Night' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 mt-2">
                     <input
@@ -1431,6 +1509,24 @@ const permissionCategories = [
                       placeholder="Enter email address"
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-655 mb-2">
+                      Assigned Shift (Duty Schedule)
+                    </label>
+                    <select
+                      value={editUserShiftId}
+                      onChange={(e) => setEditUserShiftId(e.target.value)}
+                      className="block w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 text-slate-900 text-sm outline-none transition-all cursor-pointer"
+                    >
+                      <option value="">-- Company Default Shift --</option>
+                      {shifts.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.startTime} - {s.endTime}) {s.isDefault ? '★ Default' : ''} {s.isNightShift ? '🌙 Night' : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">

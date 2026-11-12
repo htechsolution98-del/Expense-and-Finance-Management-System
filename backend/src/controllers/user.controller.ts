@@ -15,6 +15,7 @@ const createUserSchema = z.object({
   roleName: z.string(),
   employeeCode: z.string().optional(),
   autoGenerateCode: z.boolean().optional(),
+  shiftId: z.string().optional().nullable(),
 });
 
 const updateUserSchema = z.object({
@@ -22,6 +23,7 @@ const updateUserSchema = z.object({
   phone: z.string().min(10).max(15).optional(),
   email: z.string().email().optional(),
   employeeCode: z.string().min(2).optional(),
+  shiftId: z.string().optional().nullable(),
 });
 
 const updateStatusSchema = z.object({
@@ -89,7 +91,19 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction):
         createdAt: true,
         employee: {
           select: {
+            id: true,
             employeeCode: true,
+            shiftId: true,
+            shift: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                startTime: true,
+                endTime: true,
+                isNightShift: true,
+              },
+            },
           },
         },
         userRoles: {
@@ -111,7 +125,10 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction):
       email: user.email,
       status: user.status,
       createdAt: user.createdAt,
+      employeeId: user.employee?.id || null,
       employeeCode: user.employee?.employeeCode || null,
+      shiftId: user.employee?.shiftId || null,
+      shift: user.employee?.shift || null,
       role: user.userRoles[0]?.role.name || 'STAFF',
     }));
 
@@ -152,7 +169,7 @@ export const createUser = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { name, phone, email, password, roleName, employeeCode, autoGenerateCode } = createUserSchema.parse(req.body);
+    const { name, phone, email, password, roleName, employeeCode, autoGenerateCode, shiftId } = createUserSchema.parse(req.body);
     const companyId = req.companyId!;
     const currentUserId = req.user!.id;
 
@@ -223,6 +240,7 @@ export const createUser = async (
           email,
           address: 'N/A',
           status: 'ACTIVE',
+          shiftId: shiftId || null,
         },
       });
 
@@ -301,7 +319,7 @@ export const updateUser = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, phone, email, employeeCode } = updateUserSchema.parse(req.body);
+    const { name, phone, email, employeeCode, shiftId } = updateUserSchema.parse(req.body);
     const companyId = req.companyId!;
     const currentUserId = req.user!.id;
 
@@ -359,6 +377,7 @@ export const updateUser = async (
             ...(name && { name }),
             ...(phone && { mobile: phone }),
             ...(email && { email }),
+            ...(shiftId !== undefined && { shiftId: shiftId || null }),
             ...employeeCodeUpdate,
           }
         });

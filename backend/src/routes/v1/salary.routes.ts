@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  getMyPayslips,
   getSalaryStructures,
   upsertSalaryStructure,
   updateSalaryStructure,
@@ -20,6 +21,9 @@ const router = Router();
 
 router.use(authenticate);
 router.use(tenantScopeMiddleware);
+
+// Employee payslip history
+router.get('/my-payslips', getMyPayslips);
 
 // Salary structures mapping configuration
 router.get('/structures', authorize('SALARY_VIEW'), getSalaryStructures);

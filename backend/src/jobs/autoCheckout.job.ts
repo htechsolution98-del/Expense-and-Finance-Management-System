@@ -1,56 +1,67 @@
-﻿import cron from 'node-cron';
+import cron from 'node-cron';
 import { prisma } from '../config/database';
 import { logger } from '../config/logger';
 
 /**
  * Auto-Checkout Cron Job
- * Runs every day at 00:01 AM (1 minute past midnight).
- * Finds all CHECKED_IN or ON_BREAK attendance records from the PREVIOUS day
- * and automatically checks them out at the configured office end time.
+ * Runs every hour at minute 1 to check unclosed attendance records.
+ * For normal day shifts, checks out at shift end time.
+ * For night shifts (crossing midnight), preserves the shift until the next morning and checks out at morning end time.
  */
 export function startAutoCheckoutCron() {
-  // Runs at 00:01 every night
-  cron.schedule('1 0 * * *', async () => {
-    logger.info('[AutoCheckout] Cron triggered — processing unchecked records from yesterday...');
+  // Runs every hour at minute 1
+  cron.schedule('1 * * * *', async () => {
+    logger.info('[AutoCheckout] Cron triggered — evaluating open attendance records...');
 
     try {
       const now = new Date();
-      // Yesterday midnight
-      const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-      // Today midnight (exclusive upper bound)
-      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-      // Find all unclosed records from yesterday
+      // Look for open records from the last 48 hours
       const openRecords = await prisma.attendanceRecord.findMany({
         where: {
-          date: { gte: yesterday, lt: todayMidnight },
           status: { in: ['CHECKED_IN', 'ON_BREAK'] },
           checkOutTime: null,
+          checkInTime: { gte: new Date(Date.now() - 48 * 3600 * 1000) },
         },
-        include: { breaks: { orderBy: { breakStart: 'asc' } } },
+        include: {
+          breaks: { orderBy: { breakStart: 'asc' } },
+          shift: true,
+          employee: { include: { shift: true } },
+        },
       });
 
       if (openRecords.length === 0) {
-        logger.info('[AutoCheckout] No open records found. Nothing to process.');
         return;
       }
 
-      logger.info('[AutoCheckout] Found ' + openRecords.length + ' open record(s).');
+      logger.info('[AutoCheckout] Found ' + openRecords.length + ' open record(s) to evaluate.');
 
       for (const record of openRecords) {
         const config = await prisma.attendanceConfig.findUnique({
           where: { companyId: record.companyId },
         });
 
-        // Use office end time from config, default 18:00
-        const officeEndStr = config?.officeEndTime ?? '18:00';
+        const activeShift = record.shift || record.employee?.shift;
+        const isNight = activeShift?.isNightShift ?? false;
+        const officeEndStr = activeShift?.endTime ?? config?.officeEndTime ?? '18:00';
         const [endH, endM] = officeEndStr.split(':').map(Number);
 
-        const autoCheckOut = new Date(yesterday);
-        autoCheckOut.setHours(endH, endM, 0, 0);
+        // Calculate target checkout time
+        const checkOutDate = new Date(record.date);
+        if (isNight) {
+          // Night shifts cross into the next morning
+          checkOutDate.setDate(checkOutDate.getDate() + 1);
+        }
+        checkOutDate.setHours(endH, endM, 0, 0);
 
+        // If the shift has not concluded, or within a 2-hour handover buffer after shift end, skip!
+        // This gives employees 2 hours to complete patient handovers/charting and check out themselves.
+        const handoverGraceThreshold = new Date(checkOutDate.getTime() + 2 * 3600 * 1000);
+        if (now < handoverGraceThreshold) {
+          continue;
+        }
+
+        const autoCheckOut = checkOutDate;
         const checkInTime = new Date(record.checkInTime);
-        // Ensure checkout is always after check-in
         const effectiveCheckOut = autoCheckOut > checkInTime
           ? autoCheckOut
           : new Date(checkInTime.getTime() + 60000);
@@ -75,19 +86,20 @@ export function startAutoCheckoutCron() {
         const grossMins = Math.round((effectiveCheckOut.getTime() - checkInTime.getTime()) / 60000);
         const netWorkMins = Math.max(0, grossMins - totalBreakMinutes);
 
-        // Early exit calculation
+        // Early exit calculation based on shift
         let earlyExitBy: number | null = null;
-        if (config) {
-          const [eh, em] = config.officeEndTime.split(':').map(Number);
-          const officeEndMins = eh * 60 + em;
-          const checkOutMins = effectiveCheckOut.getHours() * 60 + effectiveCheckOut.getMinutes();
-          if (checkOutMins < officeEndMins) earlyExitBy = officeEndMins - checkOutMins;
+        const [eh, em] = officeEndStr.split(':').map(Number);
+        const officeEndMins = eh * 60 + em;
+        const checkOutMins = effectiveCheckOut.getHours() * 60 + effectiveCheckOut.getMinutes();
+        if (!activeShift?.isNightShift && checkOutMins < officeEndMins) {
+          earlyExitBy = officeEndMins - checkOutMins;
         }
 
-        // Half-day check
+        // Half-day check based on shift requirements
+        const halfDayThreshold = activeShift?.halfDayMinutes ?? config?.halfDayMinutes ?? 240;
         let isHalfDay = record.isHalfDay;
-        if (config && config.halfDayMinutes > 0) {
-          isHalfDay = netWorkMins < config.halfDayMinutes;
+        if (halfDayThreshold > 0) {
+          isHalfDay = netWorkMins < halfDayThreshold;
         }
 
         await prisma.attendanceRecord.update({
@@ -99,18 +111,16 @@ export function startAutoCheckoutCron() {
             totalBreakMinutes,
             earlyExitBy,
             isHalfDay,
-            checkOutNote: 'Auto-checked out at end of day by system.',
+            checkOutNote: 'Auto-checked out at end of shift by system.',
           },
         });
 
         logger.info('[AutoCheckout] Record ' + record.id + ' auto-checked out. Work: ' + netWorkMins + 'm, Break: ' + totalBreakMinutes + 'm');
       }
-
-      logger.info('[AutoCheckout] Done — ' + openRecords.length + ' record(s) processed.');
     } catch (err) {
       logger.error(err, '[AutoCheckout] Error during cron execution');
     }
   });
 
-  logger.info('[AutoCheckout] Scheduled: runs daily at 00:01 AM.');
+  logger.info('[AutoCheckout] Scheduled: runs hourly to evaluate concluded shifts.');
 }

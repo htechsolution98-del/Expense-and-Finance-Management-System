@@ -27,6 +27,39 @@ const settlePayrollSchema = z.object({
   accountId: z.string().uuid('Invalid account ID'),
 });
 
+export const getMyPayslips = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const employeeId = req.user!.employeeId;
+    if (!employeeId) {
+      res.json({ status: 'success', data: [] });
+      return;
+    }
+
+    const items = await prisma.payrollItem.findMany({
+      where: { employeeId },
+      include: {
+        payroll: {
+          select: {
+            payrollNo: true,
+            month: true,
+            year: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({ status: 'success', data: items });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getSalaryStructures = async (
   req: Request,
   res: Response,
@@ -412,6 +445,16 @@ export const generatePayroll = async (
           const currentDate = new Date(year, month - 1, d);
           const dayOfWeek = currentDate.getDay(); // 0 is Sunday
 
+          // 0. Pre-joining Check: If date is prior to employee's joining date, treat as unpaid non-employed day
+          if (emp.joiningDate) {
+            const joinDate = new Date(emp.joiningDate);
+            const joinDayStart = new Date(joinDate.getFullYear(), joinDate.getMonth(), joinDate.getDate());
+            if (currentDate < joinDayStart) {
+              lwpDays += 1;
+              continue;
+            }
+          }
+
           // 1. Weekend Check (Sunday)
           if (dayOfWeek === 0) {
             continue; // Sunday is a paid day off (no deduction)
@@ -440,25 +483,41 @@ export const generatePayroll = async (
             );
           });
 
-          if (att) {
-            if (att.isHalfDay) {
-              halfDays += 1;
-            }
-            continue;
-          }
-
-          // 4. Approved Leave Check
+          // Check if there is an approved leave for this date
           const leave = leaveRequests.find((l) => {
             const start = new Date(l.fromDate);
             const end = new Date(l.toDate);
-            // normalize current date
             const currTime = new Date(year, month - 1, d, 12, 0, 0).getTime();
             return currTime >= start.getTime() && currTime <= end.getTime();
           });
 
+          if (att) {
+            if (att.isHalfDay) {
+              // If employee worked half-day and had an approved PAID half-day leave, it's covered (no deduction)
+              if (leave && leave.dayType === 'HALF_DAY' && leave.leaveType.isPaid) {
+                // Fully covered by approved paid half-day leave
+              } else if (leave && leave.dayType === 'HALF_DAY' && !leave.leaveType.isPaid) {
+                lwpDays += 0.5;
+              } else {
+                halfDays += 1;
+              }
+            }
+            continue;
+          }
+
+          // 4. Approved Leave Check (employee did not check in)
           if (leave) {
-            if (!leave.leaveType.isPaid) {
-              lwpDays += 1;
+            if (leave.dayType === 'HALF_DAY') {
+              // Took half day leave, but failed to show up for the other half!
+              absentDays += 0.5;
+              if (!leave.leaveType.isPaid) {
+                lwpDays += 0.5;
+              }
+            } else {
+              // Full day leave
+              if (!leave.leaveType.isPaid) {
+                lwpDays += 1;
+              }
             }
             continue;
           }

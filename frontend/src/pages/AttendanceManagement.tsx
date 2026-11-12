@@ -6,6 +6,7 @@ import {
   Camera,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Coffee,
   Settings,
   User,
@@ -17,6 +18,7 @@ import {
   RefreshCw,
   Eye,
   Plus,
+  Lock,
   X
 } from 'lucide-react';
 import '../styles/attendance.css';
@@ -47,10 +49,24 @@ interface AttendanceRecord {
   totalWorkMinutes: number | null;
   totalBreakMinutes: number | null;
   breaks: Break[];
+  shift?: {
+    id: string;
+    name: string;
+    code?: string | null;
+    startTime: string;
+    endTime: string;
+  } | null;
   employee?: {
     name: string;
     employeeCode: string;
     department?: { name: string };
+    shift?: {
+      id: string;
+      name: string;
+      code?: string | null;
+      startTime: string;
+      endTime: string;
+    } | null;
   };
 }
 
@@ -68,6 +84,15 @@ interface AttendanceConfig {
   selfieRequired: boolean;
 }
 
+interface ApprovedLeaveToday {
+  id: string;
+  leaveTypeName: string;
+  reason: string;
+  dayType?: string;
+  fromDate: string;
+  toDate: string;
+}
+
 const getSelfieUrl = (path: string) => {
   if (!path) return '';
   const cleanPath = path.replace(/\\/g, '/');
@@ -80,14 +105,22 @@ export default function AttendanceManagement() {
   const user = userString ? JSON.parse(userString) : null;
   const isAdmin = user && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' || user.permissions?.includes('*'));
   const isSuperAdmin = user && (user.role === 'SUPER_ADMIN' || user.permissions?.includes('*'));
+  const canMarkManualAttendance = Boolean(
+    isSuperAdmin ||
+    user?.permissions?.includes('ATTENDANCE_MANUAL_MARK') ||
+    user?.permissions?.includes('ATTENDANCE_MANAGE') ||
+    user?.permissions?.includes('*')
+  );
 
   const [activeTab, setActiveTab] = useState<'my' | 'admin' | 'wfh'>(isAdmin ? 'admin' : 'my');
   const [config, setConfig] = useState<AttendanceConfig | null>(null);
   const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
+  const [todayLeave, setTodayLeave] = useState<ApprovedLeaveToday | null>(null);
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
   const [adminRecords, setAdminRecords] = useState<AttendanceRecord[]>([]);
   const [adminReport, setAdminReport] = useState<any | null>(null);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [shifts, setShifts] = useState<any[]>([]);
 
   // Filters
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
@@ -268,6 +301,7 @@ export default function AttendanceManagement() {
       if (res.data?.status === 'success') {
         setTodayRecord(res.data.data);
         setMyAllowWFH(res.data.allowWFH || false);
+        setTodayLeave(res.data.approvedLeaveToday || null);
       }
     } catch (err) {
       console.error(err);
@@ -355,12 +389,44 @@ export default function AttendanceManagement() {
 
   const fetchEmployeesList = async () => {
     try {
-      const res = await api.get('/masters/employees');
-      if (res.data?.success || res.data?.status === 'success') {
-        setEmployees(res.data.data);
+      const [empRes, shiftsRes] = await Promise.all([
+        api.get('/masters/employees'),
+        api.get('/attendance/shifts').catch(() => ({ data: { data: [] } })),
+      ]);
+      if (empRes.data?.success || empRes.data?.status === 'success') {
+        setEmployees(empRes.data.data);
+      }
+      if (shiftsRes.data?.success || shiftsRes.data?.status === 'success') {
+        setShifts(shiftsRes.data.data);
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleChangeEmployeeShift = async (empId: string, newShiftId: string) => {
+    try {
+      const res = await api.patch(`/attendance/employees/${empId}/shift`, {
+        shiftId: newShiftId || null,
+      });
+      if (res.data?.success || res.data?.status === 'success') {
+        const updatedShift = res.data.data.shift;
+        setEmployees((prev) =>
+          prev.map((emp) =>
+            emp.id === empId ? { ...emp, shiftId: newShiftId || null, shift: updatedShift } : emp
+          )
+        );
+        setMessage({
+          text: `Shift updated for ${res.data.data.name} to ${updatedShift ? updatedShift.name : 'Default Shift'}.`,
+          type: 'success',
+        });
+        setTimeout(() => setMessage(null), 3500);
+      }
+    } catch (err: any) {
+      setMessage({
+        text: err.response?.data?.message || 'Failed to update employee shift.',
+        type: 'error',
+      });
     }
   };
 
@@ -480,6 +546,14 @@ export default function AttendanceManagement() {
 
   // Check In/Out flow
   const handleCheckInOut = async (mode: 'in' | 'out') => {
+    if (mode === 'in' && todayLeave && todayLeave.dayType !== 'HALF_DAY') {
+      setMessage({
+        text: `Check-in blocked: You are on an approved leave today (${todayLeave.leaveTypeName}). If you came to work and need to check in, please contact Admin or Super Admin to mark your attendance manually.`,
+        type: 'error',
+      });
+      return;
+    }
+
     // If mobile web or config requires selfie, open camera first
     const isMobile = window.innerWidth <= 768;
     if ((config?.selfieRequired || isMobile) && !capturedPhoto) {
@@ -640,17 +714,51 @@ export default function AttendanceManagement() {
                 </div>
               )}
 
+              {/* Approved Leave Alert Banner */}
+              {todayLeave && (!todayRecord || todayRecord.status === 'CHECKED_OUT') && (
+                <div className={`w-full max-w-sm p-4 rounded-2xl border text-center space-y-1 mb-2 ${
+                  todayLeave.dayType === 'HALF_DAY'
+                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-200'
+                    : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                }`}>
+                  <div className={`flex items-center justify-center gap-2 font-bold text-xs ${
+                    todayLeave.dayType === 'HALF_DAY' ? 'text-blue-400' : 'text-amber-400'
+                  }`}>
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>
+                      {todayLeave.dayType === 'HALF_DAY'
+                        ? `Approved Half-Day Leave (${todayLeave.leaveTypeName})`
+                        : `On Approved Leave Today (${todayLeave.leaveTypeName})`}
+                    </span>
+                  </div>
+                  <p className={`text-[11px] leading-relaxed ${
+                    todayLeave.dayType === 'HALF_DAY' ? 'text-blue-200/90' : 'text-amber-200/90'
+                  }`}>
+                    {todayLeave.dayType === 'HALF_DAY'
+                      ? 'You have an approved half-day leave. Please check in below to log your working half-shift.'
+                      : 'Self check-in is disabled. If you reported to work, please meet your Admin or Super Admin to mark your attendance manually.'}
+                  </p>
+                </div>
+              )}
+
               {/* Check-In/Out Circle Button */}
               {!todayRecord || todayRecord.status === 'CHECKED_OUT' ? (
                 <button
                   onClick={() => handleCheckInOut('in')}
-                  disabled={actionLoading || (config?.geoFencingEnabled && !myAllowWFH && isWithinRadius === false)}
-                  className="att-btn-checkin"
+                  disabled={actionLoading || Boolean(todayLeave && todayLeave.dayType !== 'HALF_DAY') || (config?.geoFencingEnabled && !myAllowWFH && isWithinRadius === false)}
+                  className={`att-btn-checkin ${todayLeave && todayLeave.dayType !== 'HALF_DAY' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  title={todayLeave && todayLeave.dayType !== 'HALF_DAY' ? `You are on approved leave today (${todayLeave.leaveTypeName})` : undefined}
                 >
-                  <Clock className="w-8 h-8" />
-                  <span>CHECK IN</span>
+                  {todayLeave && todayLeave.dayType !== 'HALF_DAY' ? <Lock className="w-8 h-8 text-amber-400" /> : <Clock className="w-8 h-8" />}
+                  <span>{todayLeave && todayLeave.dayType !== 'HALF_DAY' ? 'ON LEAVE' : 'CHECK IN'}</span>
                   <span className="text-[10px] opacity-75 font-normal">
-                    {config?.geoFencingEnabled && !myAllowWFH && isWithinRadius === false ? 'Disabled (Outside)' : 'Arrival'}
+                    {todayLeave && todayLeave.dayType !== 'HALF_DAY'
+                      ? 'Self Check-in Blocked'
+                      : config?.geoFencingEnabled && !myAllowWFH && isWithinRadius === false
+                      ? 'Disabled (Outside)'
+                      : todayLeave?.dayType === 'HALF_DAY'
+                      ? 'Half-Day Shift'
+                      : 'Arrival'}
                   </span>
                 </button>
               ) : (
@@ -976,14 +1084,26 @@ export default function AttendanceManagement() {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 items-end sm:items-center">
                 {/* Manual Attendance Button */}
-                <button
-                  onClick={() => setShowManualModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md"
-                  title="Add manual attendance entry for any employee"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Manual Attendance
-                </button>
+                {canMarkManualAttendance ? (
+                  <button
+                    onClick={() => setShowManualModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md"
+                    title="Add manual attendance entry for any employee"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Manual Attendance
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs font-bold cursor-not-allowed opacity-60 border border-slate-600"
+                    title="Manual Attendance requires Super Admin authorization (ATTENDANCE_MANUAL_MARK permission)"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    Manual Attendance (Locked)
+                  </button>
+                )}
                 {/* Export Button — Super Admin only */}
                 {isSuperAdmin && (
                   <button
@@ -1077,7 +1197,14 @@ export default function AttendanceManagement() {
                     currentPageRecords.map((record) => (
                       <tr key={record.id} className="hover:bg-white/5">
                         <td className="py-3.5">
-                          <div className="font-semibold text-white">{record.employee?.name}</div>
+                          <div className="font-semibold text-white flex items-center gap-2">
+                            <span>{record.employee?.name}</span>
+                            {(record.shift || record.employee?.shift) && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/25">
+                                {(record.shift || record.employee?.shift)?.name}
+                              </span>
+                            )}
+                          </div>
                           <div className="text-[10px] text-gray-400">
                             {record.employee?.employeeCode} • {record.employee?.department?.name || 'General'}
                             {adminFilterMode === 'range' && ` • ${new Date(record.date).toLocaleDateString()}`}
@@ -1236,44 +1363,59 @@ export default function AttendanceManagement() {
       )}
 
       {activeTab === 'wfh' && isAdmin && (
-        <div className="flex flex-col gap-6">
-          <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-slate-900/40">
+        <div className="flex flex-col gap-6 text-left">
+          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
             <div className="mb-6">
-              <h3 className="text-lg font-bold text-white">Work From Home (WFH) Permissions</h3>
-              <p className="text-xs text-gray-400 mt-1">
-                Toggle WFH permission for individual employees. When enabled, geofencing coordinates checks are skipped.
+              <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Hospital Duty Roster & Shift Assignments</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Assign and rotate operational duty shifts (Morning, Evening, Night, General) for hospital staff, and toggle Work From Home (WFH) permissions.
               </p>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto border border-slate-100 rounded-xl">
               <table className="min-w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                    <th className="pb-3">Employee Code</th>
-                    <th className="pb-3">Name</th>
-                    <th className="pb-3">Email & Mobile</th>
-                    <th className="pb-3">Department</th>
-                    <th className="pb-3 text-center">Allow WFH</th>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-[10px] text-slate-600 font-bold uppercase tracking-wider">
+                    <th className="px-4 py-3">Employee Code</th>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Email & Mobile</th>
+                    <th className="px-4 py-3">Department</th>
+                    <th className="px-4 py-3">Assigned Shift</th>
+                    <th className="px-4 py-3 text-center">Allow WFH</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 text-sm">
+                <tbody className="divide-y divide-slate-100 text-sm bg-white">
                   {employees.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-6 text-center text-gray-500 font-medium">
+                      <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
                         No active employees found.
                       </td>
                     </tr>
                   ) : (
                     employees.map((emp) => (
-                      <tr key={emp.id} className="hover:bg-white/5">
-                        <td className="py-3.5 font-mono text-gray-300">{emp.employeeCode}</td>
-                        <td className="py-3.5 font-semibold text-white">{emp.name}</td>
-                        <td className="py-3.5 text-gray-400 text-xs">
-                          <div>{emp.email}</div>
-                          <div>{emp.mobile}</div>
+                      <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3.5 font-mono font-bold text-slate-800">{emp.employeeCode}</td>
+                        <td className="px-4 py-3.5 font-bold text-slate-900">{emp.name}</td>
+                        <td className="px-4 py-3.5 text-slate-500 text-xs">
+                          <div className="text-slate-800">{emp.email}</div>
+                          <div className="text-slate-400">{emp.mobile}</div>
                         </td>
-                        <td className="py-3.5 text-gray-300">{emp.department?.name || 'General'}</td>
-                        <td className="py-3.5 text-center">
+                        <td className="px-4 py-3.5 text-slate-600 font-medium text-xs">{emp.department?.name || 'General'}</td>
+                        <td className="px-4 py-3.5">
+                          <select
+                            value={emp.shiftId || ''}
+                            onChange={(e) => handleChangeEmployeeShift(emp.id, e.target.value)}
+                            className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer shadow-sm"
+                          >
+                            <option value="">Default (Company)</option>
+                            {shifts.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name} ({s.startTime} - {s.endTime}) {s.isNightShift ? '🌙' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
                           <label className="inline-flex items-center cursor-pointer">
                             <input
                               type="checkbox"
@@ -1281,7 +1423,7 @@ export default function AttendanceManagement() {
                               onChange={() => handleToggleWFH(emp.id, emp.allowWFH || false)}
                               className="sr-only peer"
                             />
-                            <div className="relative w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-gray-400 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 peer-checked:after:bg-white"></div>
+                            <div className="relative w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
                           </label>
                         </td>
                       </tr>

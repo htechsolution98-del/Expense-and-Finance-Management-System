@@ -15,6 +15,11 @@ import {
   getAttendanceReport,
   toggleEmployeeWFH,
   createManualAttendance,
+  getShifts,
+  createShift,
+  updateShift,
+  deleteShift,
+  assignEmployeeShift,
 } from '../../controllers/attendance.controller';
 import { authenticate } from '../../middleware/auth.middleware';
 import { tenantScopeMiddleware } from '../../middleware/tenantScope.middleware';
@@ -70,6 +75,13 @@ router.get('/my', getMyAttendance);
 router.get('/all', getAllAttendance);
 router.get('/report', getAttendanceReport);
 router.patch('/employees/:id/wfh', toggleEmployeeWFH);
+router.patch('/employees/:id/shift', assignEmployeeShift);
 router.post('/manual', createManualAttendance);
+
+// Shift Management (Multi-shift / Hospital & 24/7 Operations)
+router.get('/shifts', getShifts);
+router.post('/shifts', createShift);
+router.put('/shifts/:id', updateShift);
+router.delete('/shifts/:id', deleteShift);
 
 export default router;

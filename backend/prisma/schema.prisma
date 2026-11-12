@@ -52,6 +52,7 @@ model Company {
   holidays             Holiday[]
   attendanceConfigs    AttendanceConfig[]
   attendanceRecords    AttendanceRecord[]
+  shifts               Shift[]
   announcements        Announcement[]
   subscriptionPlan     SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id], onDelete: SetNull)
 
@@ -264,12 +265,14 @@ model Employee {
   allowWFH      Boolean  @default(false) @map("allow_wfh")
   departmentId  String?  @map("department_id")
   designationId String?  @map("designation_id")
+  shiftId       String?  @map("shift_id")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   company           Company               @relation(fields: [companyId], references: [id])
   department        Department?           @relation(fields: [departmentId], references: [id])
   designation       Designation?          @relation(fields: [designationId], references: [id])
+  shift             Shift?                @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   transactions      Transaction[]
   expenses          Expense[]
   salaryStructures  SalaryStructure[]
@@ -830,15 +833,48 @@ model AttendanceRecord {
   isWithinGeofence  Boolean   @default(true) @map("is_within_geofence")
   isHalfDay         Boolean   @default(false) @map("is_half_day")
   checkOutNote      String?   @map("check_out_note") // Optional system note e.g. auto-checkout
+  shiftId           String?   @map("shift_id")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   company  Company           @relation(fields: [companyId], references: [id])
   employee Employee          @relation(fields: [employeeId], references: [id])
+  shift    Shift?            @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   breaks   AttendanceBreak[]
 
   @@unique([employeeId, date])
   @@map("attendance_records")
+}
+
+model Shift {
+  id                   String   @id @default(uuid())
+  companyId            String   @map("company_id")
+  name                 String
+  code                 String?
+  startTime            String   @default("09:00") @map("start_time")
+  endTime              String   @default("18:00") @map("end_time")
+  graceMinutes         Int      @default(15) @map("grace_minutes")
+  halfDayMinutes       Int      @default(240) @map("half_day_minutes")
+  breakDurationMinutes Int      @default(60) @map("break_duration_minutes")
+  breakStartTime       String?  @default("13:00") @map("break_start_time")
+  breakEndTime         String?  @default("14:00") @map("break_end_time")
+  selfieRequired       Boolean  @default(false) @map("selfie_required")
+  geoFencingEnabled    Boolean  @default(false) @map("geo_fencing_enabled")
+  geoLat               Float?   @map("geo_lat")
+  geoLng               Float?   @map("geo_lng")
+  geoRadiusMeters      Int?     @default(200) @map("geo_radius_meters")
+  isNightShift         Boolean  @default(false) @map("is_night_shift")
+  isDefault            Boolean  @default(false) @map("is_default")
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employees         Employee[]
+  attendanceRecords AttendanceRecord[]
+
+  @@unique([companyId, name])
+  @@map("shifts")
 }
 
 model AttendanceBreak {

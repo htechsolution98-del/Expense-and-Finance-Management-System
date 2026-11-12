@@ -31,6 +31,81 @@ const checkOutSchema = z.object({
   longitude: z.preprocess((val) => val === undefined || val === '' || val === null ? undefined : Number(val), z.number().optional()),
 });
 
+export const shiftSchema = z.object({
+  name: z.string().min(2, 'Shift name must be at least 2 characters'),
+  code: z.string().optional().nullable(),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Format must be HH:MM'),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Format must be HH:MM'),
+  graceMinutes: z.number().int().min(0).max(120).default(15),
+  halfDayMinutes: z.number().int().min(0).max(720).default(240),
+  breakDurationMinutes: z.number().int().min(0).max(180).default(60),
+  breakStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Format must be HH:MM').optional().nullable(),
+  breakEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'Format must be HH:MM').optional().nullable(),
+  selfieRequired: z.boolean().default(false),
+  geoFencingEnabled: z.boolean().default(false),
+  geoLat: z.preprocess((val) => val === '' || val === null || val === undefined ? null : Number(val), z.number().nullable().optional()),
+  geoLng: z.preprocess((val) => val === '' || val === null || val === undefined ? null : Number(val), z.number().nullable().optional()),
+  geoRadiusMeters: z.preprocess((val) => val === '' || val === null || val === undefined ? 200 : Number(val), z.number().int().min(20).max(10000).optional().nullable()),
+  isNightShift: z.boolean().default(false),
+  isDefault: z.boolean().default(false),
+  isActive: z.boolean().default(true),
+});
+
+const DEFAULT_COMPANY_SHIFTS = [
+  {
+    name: 'General Shift',
+    code: 'GEN',
+    startTime: '09:00',
+    endTime: '18:00',
+    graceMinutes: 15,
+    halfDayMinutes: 240,
+    breakDurationMinutes: 60,
+    breakStartTime: '13:00',
+    breakEndTime: '14:00',
+    isNightShift: false,
+    isDefault: true,
+  },
+  {
+    name: 'Morning Shift',
+    code: 'MORN',
+    startTime: '07:00',
+    endTime: '15:00',
+    graceMinutes: 15,
+    halfDayMinutes: 240,
+    breakDurationMinutes: 45,
+    breakStartTime: '11:00',
+    breakEndTime: '11:45',
+    isNightShift: false,
+    isDefault: false,
+  },
+  {
+    name: 'Evening Shift',
+    code: 'EVE',
+    startTime: '15:00',
+    endTime: '23:00',
+    graceMinutes: 15,
+    halfDayMinutes: 240,
+    breakDurationMinutes: 45,
+    breakStartTime: '19:00',
+    breakEndTime: '19:45',
+    isNightShift: false,
+    isDefault: false,
+  },
+  {
+    name: 'Night Shift',
+    code: 'NIGHT',
+    startTime: '23:00',
+    endTime: '07:00',
+    graceMinutes: 15,
+    halfDayMinutes: 240,
+    breakDurationMinutes: 45,
+    breakStartTime: '03:00',
+    breakEndTime: '03:45',
+    isNightShift: true,
+    isDefault: false,
+  },
+];
+
 // ── Haversine Distance ────────────────────────────────────────────────────────
 
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -57,6 +132,74 @@ function getTodayDate(): Date {
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
+}
+
+export function validateShiftBreakTiming(
+  startTime: string,
+  endTime: string,
+  breakStartTime: string | null | undefined,
+  breakEndTime: string | null | undefined,
+  breakDurationMinutes: number,
+  isNightShift: boolean
+): string | null {
+  if (!breakStartTime && !breakEndTime) {
+    return null;
+  }
+  if (!breakStartTime || !breakEndTime) {
+    return 'Both Break Allowed From and Break Allowed Until must be provided.';
+  }
+
+  const startM = timeToMinutes(startTime);
+  const endM = timeToMinutes(endTime);
+  const bStartM = timeToMinutes(breakStartTime);
+  const bEndM = timeToMinutes(breakEndTime);
+
+  if (!isNightShift) {
+    if (startM >= endM) {
+      return `Shift End Time (${endTime}) must be after Shift Start Time (${startTime}). If shift crosses midnight, please enable Night Shift.`;
+    }
+    if (bStartM < startM || bStartM >= endM) {
+      return `Break Allowed From (${breakStartTime}) is outside working hours (${startTime} - ${endTime}). Break must be within shift hours.`;
+    }
+    if (bEndM <= startM || bEndM > endM) {
+      return `Break Allowed Until (${breakEndTime}) is outside working hours (${startTime} - ${endTime}). Break must be within shift hours.`;
+    }
+    if (bEndM <= bStartM) {
+      return `Break Allowed Until (${breakEndTime}) must be later than Break Allowed From (${breakStartTime}).`;
+    }
+    const windowMinutes = bEndM - bStartM;
+    if (breakDurationMinutes > windowMinutes) {
+      return `Allowed break duration (${breakDurationMinutes} mins) cannot exceed the break window of ${windowMinutes} mins (${breakStartTime} - ${breakEndTime}).`;
+    }
+  } else {
+    // Night shift (crosses midnight, e.g. 23:00 to 07:00)
+    const isWithinNightShift = (m: number) => m >= startM || m <= endM;
+    if (!isWithinNightShift(bStartM)) {
+      return `Break Allowed From (${breakStartTime}) is outside night shift hours (${startTime} - ${endTime}). Break must be within shift hours.`;
+    }
+    if (!isWithinNightShift(bEndM)) {
+      return `Break Allowed Until (${breakEndTime}) is outside night shift hours (${startTime} - ${endTime}). Break must be within shift hours.`;
+    }
+
+    let windowMinutes = 0;
+    if (bStartM >= startM && bEndM <= endM) {
+      // Break crosses midnight (e.g. 23:30 to 00:30)
+      windowMinutes = (1440 - bStartM) + bEndM;
+    } else if ((bStartM >= startM && bEndM >= startM) || (bStartM <= endM && bEndM <= endM)) {
+      if (bEndM <= bStartM) {
+        return `Break Allowed Until (${breakEndTime}) must be later than Break Allowed From (${breakStartTime}).`;
+      }
+      windowMinutes = bEndM - bStartM;
+    } else {
+      return `Break window (${breakStartTime} - ${breakEndTime}) is outside the night shift schedule (${startTime} - ${endTime}).`;
+    }
+
+    if (breakDurationMinutes > windowMinutes) {
+      return `Allowed break duration (${breakDurationMinutes} mins) cannot exceed the break window of ${windowMinutes} mins (${breakStartTime} - ${breakEndTime}).`;
+    }
+  }
+
+  return null;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -113,6 +256,26 @@ export const upsertAttendanceConfig = async (
     const companyId = req.user!.companyId;
     const data = configSchema.parse(req.body);
 
+    const breakError = validateShiftBreakTiming(
+      data.officeStartTime,
+      data.officeEndTime,
+      data.breakStartTime,
+      data.breakEndTime,
+      data.breakDurationMinutes,
+      false
+    );
+    if (breakError) {
+      throw new BadRequestError(breakError);
+    }
+
+    // Geofencing coordinates validation: if shift geofencing is on, verify either shift or company has coordinates
+    if (data.geoFencingEnabled && (data.geoLat == null || data.geoLng == null)) {
+      const companyConfig = await prisma.attendanceConfig.findUnique({ where: { companyId } });
+      if (!companyConfig || companyConfig.geoLat == null || companyConfig.geoLng == null) {
+        throw new BadRequestError('GPS Coordinates (Latitude & Longitude) must be provided when Geofencing is enabled.');
+      }
+    }
+
     const config = await prisma.attendanceConfig.upsert({
       where: { companyId },
       create: { companyId, ...data },
@@ -151,25 +314,73 @@ export const checkIn = async (
       throw new BadRequestError('You have already checked in today.');
     }
 
-    // Get employee to check WFH permission
+    // Check if an open attendance session exists from yesterday (e.g. overnight night shift)
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const openYesterday = await prisma.attendanceRecord.findUnique({
+      where: { employeeId_date: { employeeId, date: yesterday } },
+    });
+    if (openYesterday && (openYesterday.status === 'CHECKED_IN' || openYesterday.status === 'ON_BREAK')) {
+      throw new BadRequestError('You currently have an active check-in session from your previous shift. Please check out before starting a new shift.');
+    }
+
+    // Get employee to check WFH permission and assigned shift
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
-      select: { name: true, allowWFH: true },
+      include: { shift: true },
     });
     if (!employee) throw new BadRequestError('Employee profile not found.');
+
+    // Check if employee has an approved leave request covering today
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const approvedLeaveToday = await prisma.leaveRequest.findFirst({
+      where: {
+        employeeId,
+        status: 'APPROVED',
+        fromDate: { lte: endOfDay },
+        toDate: { gte: startOfDay },
+      },
+      include: {
+        leaveType: true,
+      },
+    });
+
+    if (approvedLeaveToday && approvedLeaveToday.dayType !== 'HALF_DAY') {
+      throw new BadRequestError(
+        `Check-in blocked: You are currently on an approved leave today (${approvedLeaveToday.leaveType?.name || 'Leave'}). If you reported to work and need to check in, please contact Admin or Super Admin to mark your attendance manually.`
+      );
+    }
 
     // Get config
     const config = await prisma.attendanceConfig.findUnique({ where: { companyId } });
 
+    const activeShift = employee.shift;
+    const isGeoRequired = activeShift?.geoFencingEnabled || config?.geoFencingEnabled || false;
+    const isSelfieRequired = activeShift?.selfieRequired || config?.selfieRequired || false;
+
+    // Shift coordinates override company office coordinates if provided
+    const targetLat = activeShift?.geoLat ?? config?.geoLat;
+    const targetLng = activeShift?.geoLng ?? config?.geoLng;
+    const targetRadius = activeShift?.geoRadiusMeters ?? config?.geoRadiusMeters ?? 200;
+
+    // Selfie check
+    if (isSelfieRequired && !req.file) {
+      throw new BadRequestError('Check-in blocked: A live selfie verification photo is required for your shift.');
+    }
+
     // Geofence check
     let isWithinGeofence = true;
-    if (config?.geoFencingEnabled && config.geoLat != null && config.geoLng != null) {
+    if (isGeoRequired && targetLat != null && targetLng != null) {
       if (latitude && longitude) {
-        const distance = haversineDistance(config.geoLat, config.geoLng, latitude, longitude);
-        isWithinGeofence = distance <= config.geoRadiusMeters;
+        const distance = haversineDistance(targetLat, targetLng, latitude, longitude);
+        isWithinGeofence = distance <= targetRadius;
         if (!isWithinGeofence) {
           if (!employee.allowWFH) {
-            throw new BadRequestError('Check-in blocked: You are outside the office geofence boundary and do not have Work From Home permission.');
+            throw new BadRequestError(`Check-in blocked: You are outside the shift geofence boundary (${Math.round(distance)}m away, limit is ${targetRadius}m) and do not have Work From Home permission.`);
           }
           // If WFH is allowed, treat as geofence compliant
           isWithinGeofence = true;
@@ -181,14 +392,29 @@ export const checkIn = async (
       }
     }
 
-    // Calculate late
+    // Shift-aware late calculation:
+    // If employee has a specific shift assigned, use its startTime & graceMinutes; otherwise fallback to company config
     let lateBy: number | null = null;
-    if (config) {
-      const officeStart = timeToMinutes(config.officeStartTime);
-      const graceEnd = officeStart + config.graceMinutes;
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const startTimeStr = activeShift?.startTime ?? config?.officeStartTime ?? '09:00';
+    const graceMin = activeShift?.graceMinutes ?? config?.graceMinutes ?? 15;
+    const isNightShift = activeShift?.isNightShift ?? false;
+
+    const startMinutes = timeToMinutes(startTimeStr);
+    const graceEnd = startMinutes + graceMin;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    if (!isNightShift) {
       if (currentMinutes > graceEnd) {
-        lateBy = currentMinutes - officeStart;
+        lateBy = currentMinutes - startMinutes;
+      }
+    } else {
+      // Overnight / night shift handling (e.g. shift starts 23:00 / 1380m)
+      if (startMinutes > 12 * 60) {
+        if (currentMinutes > graceEnd) {
+          lateBy = currentMinutes - startMinutes;
+        } else if (currentMinutes < 12 * 60 && currentMinutes > graceMin) {
+          lateBy = (1440 - startMinutes) + currentMinutes;
+        }
       }
     }
 
@@ -202,6 +428,7 @@ export const checkIn = async (
       data: {
         companyId,
         employeeId,
+        shiftId: employee.shiftId || activeShift?.id || null,
         date: today,
         checkInTime: now,
         checkInLat: latitude || null,
@@ -237,23 +464,60 @@ export const checkOut = async (
     const today = getTodayDate();
     const now = new Date();
 
-    const record = await prisma.attendanceRecord.findUnique({
+    let record = await prisma.attendanceRecord.findUnique({
       where: { employeeId_date: { employeeId, date: today } },
-      include: { breaks: true },
+      include: {
+        breaks: true,
+        shift: true,
+        employee: {
+          include: { shift: true },
+        },
+      },
     });
+
+    // For night shifts crossing midnight: if today has no record, check yesterday's open record
+    if (!record) {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayRecord = await prisma.attendanceRecord.findUnique({
+        where: { employeeId_date: { employeeId, date: yesterday } },
+        include: {
+          breaks: true,
+          shift: true,
+          employee: {
+            include: { shift: true },
+          },
+        },
+      });
+
+      if (yesterdayRecord && (yesterdayRecord.status === 'CHECKED_IN' || yesterdayRecord.status === 'ON_BREAK')) {
+        record = yesterdayRecord;
+      }
+    }
 
     if (!record) throw new BadRequestError('You have not checked in today.');
     if (record.status === 'CHECKED_OUT') throw new BadRequestError('You have already checked out today.');
     if (record.status === 'ON_BREAK') throw new BadRequestError('Please end your break before checking out.');
 
-    // Get config for early exit calc
+    // Get config for early exit & half day fallback
     const config = await prisma.attendanceConfig.findUnique({ where: { companyId } });
 
+    // Effective shift timings
+    const activeShift = record.shift || record.employee.shift;
+    const endTimeStr = activeShift?.endTime ?? config?.officeEndTime ?? '18:00';
+    const halfDayThreshold = activeShift?.halfDayMinutes ?? config?.halfDayMinutes ?? 240;
+
     let earlyExitBy: number | null = null;
-    if (config) {
-      const officeEnd = timeToMinutes(config.officeEndTime);
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const officeEnd = timeToMinutes(endTimeStr);
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    if (!activeShift?.isNightShift) {
       if (currentMinutes < officeEnd) {
+        earlyExitBy = officeEnd - currentMinutes;
+      }
+    } else {
+      // Night shift concluding next morning (e.g. shift ends at 07:00 / 420 mins)
+      if (currentMinutes < officeEnd && currentMinutes >= 0) {
         earlyExitBy = officeEnd - currentMinutes;
       }
     }
@@ -266,10 +530,31 @@ export const checkOut = async (
     const workMs = now.getTime() - record.checkInTime.getTime();
     const totalWorkMinutes = Math.round(workMs / 60000) - totalBreakMinutes;
 
-    // Check if half day
+    // Check if half day based on shift requirements
     let isHalfDay = false;
-    if (config && config.halfDayMinutes > 0) {
-      isHalfDay = totalWorkMinutes < config.halfDayMinutes;
+    if (halfDayThreshold > 0) {
+      isHalfDay = totalWorkMinutes < halfDayThreshold;
+    }
+
+    const isSelfieRequired = activeShift?.selfieRequired || config?.selfieRequired || false;
+    if (isSelfieRequired && !req.file) {
+      throw new BadRequestError('Check-out blocked: A live selfie verification photo is required for your shift.');
+    }
+
+    const isGeoRequired = activeShift?.geoFencingEnabled || config?.geoFencingEnabled || false;
+    const targetLat = activeShift?.geoLat ?? config?.geoLat;
+    const targetLng = activeShift?.geoLng ?? config?.geoLng;
+    const targetRadius = activeShift?.geoRadiusMeters ?? config?.geoRadiusMeters ?? 200;
+
+    if (isGeoRequired && targetLat != null && targetLng != null) {
+      if (latitude && longitude) {
+        const distance = haversineDistance(targetLat, targetLng, latitude, longitude);
+        if (distance > targetRadius && !record.employee.allowWFH) {
+          throw new BadRequestError(`Check-out blocked: You are outside the shift geofence boundary (${Math.round(distance)}m away, limit is ${targetRadius}m).`);
+        }
+      } else if (!record.employee.allowWFH) {
+        throw new BadRequestError('Check-out blocked: Geolocation is required for attendance verification.');
+      }
     }
 
     // Handle selfie
@@ -319,10 +604,22 @@ export const startBreak = async (
     if (!employeeId) throw new BadRequestError('No linked employee profile found.');
 
     const today = getTodayDate();
-    const record = await prisma.attendanceRecord.findUnique({
+    let record = await prisma.attendanceRecord.findUnique({
       where: { employeeId_date: { employeeId, date: today } },
-      include: { breaks: true },
+      include: { breaks: true, shift: true, employee: { include: { shift: true } } },
     });
+
+    if (!record) {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayRecord = await prisma.attendanceRecord.findUnique({
+        where: { employeeId_date: { employeeId, date: yesterday } },
+        include: { breaks: true, shift: true, employee: { include: { shift: true } } },
+      });
+      if (yesterdayRecord && (yesterdayRecord.status === 'CHECKED_IN' || yesterdayRecord.status === 'ON_BREAK')) {
+        record = yesterdayRecord;
+      }
+    }
 
     if (!record) throw new BadRequestError('You have not checked in today.');
     if (record.status === 'CHECKED_OUT') throw new BadRequestError('You have already checked out.');
@@ -356,10 +653,22 @@ export const endBreak = async (
     if (!employeeId) throw new BadRequestError('No linked employee profile found.');
 
     const today = getTodayDate();
-    const record = await prisma.attendanceRecord.findUnique({
+    let record = await prisma.attendanceRecord.findUnique({
       where: { employeeId_date: { employeeId, date: today } },
       include: { breaks: { orderBy: { breakStart: 'desc' }, take: 1 } },
     });
+
+    if (!record) {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayRecord = await prisma.attendanceRecord.findUnique({
+        where: { employeeId_date: { employeeId, date: yesterday } },
+        include: { breaks: { orderBy: { breakStart: 'desc' }, take: 1 } },
+      });
+      if (yesterdayRecord && yesterdayRecord.status === 'ON_BREAK') {
+        record = yesterdayRecord;
+      }
+    }
 
     if (!record) throw new BadRequestError('You have not checked in today.');
     if (record.status !== 'ON_BREAK') throw new BadRequestError('You are not on a break.');
@@ -404,17 +713,60 @@ export const getTodayStatus = async (
     }
 
     const today = getTodayDate();
-    const record = await prisma.attendanceRecord.findUnique({
+    let record = await prisma.attendanceRecord.findUnique({
       where: { employeeId_date: { employeeId, date: today } },
-      include: { breaks: { orderBy: { breakStart: 'asc' } } },
+      include: { breaks: { orderBy: { breakStart: 'asc' } }, shift: true },
     });
+
+    // Check if employee has an active night shift session from yesterday
+    if (!record || record.status === 'CHECKED_OUT') {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayRecord = await prisma.attendanceRecord.findUnique({
+        where: { employeeId_date: { employeeId, date: yesterday } },
+        include: { breaks: { orderBy: { breakStart: 'asc' } }, shift: true },
+      });
+      if (yesterdayRecord && (yesterdayRecord.status === 'CHECKED_IN' || yesterdayRecord.status === 'ON_BREAK')) {
+        record = yesterdayRecord;
+      }
+    }
 
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
       select: { allowWFH: true },
     });
 
-    res.json({ status: 'success', data: record, allowWFH: employee?.allowWFH || false });
+    // Check if employee has an approved leave request covering today
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const approvedLeaveToday = await prisma.leaveRequest.findFirst({
+      where: {
+        employeeId,
+        status: 'APPROVED',
+        fromDate: { lte: endOfDay },
+        toDate: { gte: startOfDay },
+      },
+      include: { leaveType: true },
+    });
+
+    res.json({
+      status: 'success',
+      data: record,
+      allowWFH: employee?.allowWFH || false,
+      approvedLeaveToday: approvedLeaveToday
+        ? {
+            id: approvedLeaveToday.id,
+            leaveTypeName: approvedLeaveToday.leaveType?.name || 'Leave',
+            reason: approvedLeaveToday.reason,
+            dayType: approvedLeaveToday.dayType,
+            fromDate: approvedLeaveToday.fromDate,
+            toDate: approvedLeaveToday.toDate,
+          }
+        : null,
+    });
   } catch (error) {
     next(error);
   }
@@ -500,8 +852,15 @@ export const getAllAttendance = async (
       where: { companyId, ...dateFilter },
       include: {
         employee: {
-          select: { id: true, name: true, employeeCode: true, department: { select: { name: true } } },
+          select: {
+            id: true,
+            name: true,
+            employeeCode: true,
+            department: { select: { name: true } },
+            shift: { select: { id: true, name: true, code: true, startTime: true, endTime: true, isNightShift: true } },
+          },
         },
+        shift: { select: { id: true, name: true, code: true, startTime: true, endTime: true, isNightShift: true } },
         breaks: { orderBy: { breakStart: 'asc' } },
       },
       orderBy: { checkInTime: 'asc' },
@@ -516,6 +875,7 @@ export const getAllAttendance = async (
           name: true,
           employeeCode: true,
           department: { select: { name: true } },
+          shift: { select: { id: true, name: true, code: true, startTime: true, endTime: true, isNightShift: true } },
         },
       });
 
@@ -713,8 +1073,16 @@ export const createManualAttendance = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    if (req.user!.role !== 'SUPER_ADMIN' && req.user!.role !== 'ADMIN') {
-      throw new ForbiddenError('Only Admin or Super Admin can mark manual attendance.');
+    const isSuperAdmin = req.user!.role === 'SUPER_ADMIN' || req.user!.permissions?.includes('*');
+    const hasManualAttendanceRight =
+      isSuperAdmin ||
+      req.user!.permissions?.includes('ATTENDANCE_MANUAL_MARK') ||
+      req.user!.permissions?.includes('ATTENDANCE_MANAGE');
+
+    if (!hasManualAttendanceRight) {
+      throw new ForbiddenError(
+        'Access Denied: You do not have permission to mark manual attendance. Super Admin must grant you the "ATTENDANCE_MANUAL_MARK" permission.'
+      );
     }
 
     const { employeeId, date, checkInTimeStr, checkOutTimeStr } = req.body;
@@ -748,29 +1116,40 @@ export const createManualAttendance = async (
       status = 'CHECKED_OUT';
     }
 
+    // Fetch employee with shift
+    const employee = await prisma.employee.findFirst({
+      where: { id: employeeId, companyId },
+      include: { shift: true },
+    });
+    if (!employee) throw new BadRequestError('Employee not found.');
+
     const config = await prisma.attendanceConfig.findUnique({ where: { companyId } });
+    const activeShift = employee.shift;
+    const startTimeStr = activeShift?.startTime ?? config?.officeStartTime ?? '09:00';
+    const endTimeStr = activeShift?.endTime ?? config?.officeEndTime ?? '18:00';
+    const graceMin = activeShift?.graceMinutes ?? config?.graceMinutes ?? 15;
+    const halfDayThreshold = activeShift?.halfDayMinutes ?? config?.halfDayMinutes ?? 240;
+
     let lateBy: number | null = null;
     let earlyExitBy: number | null = null;
     let isHalfDay = false;
 
-    if (config) {
-      const officeStart = timeToMinutes(config.officeStartTime);
-      const officeEnd = timeToMinutes(config.officeEndTime);
-      
-      const checkInMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes();
-      if (checkInMinutes > officeStart + config.graceMinutes) {
-        lateBy = checkInMinutes - officeStart;
+    const officeStart = timeToMinutes(startTimeStr);
+    const officeEnd = timeToMinutes(endTimeStr);
+    
+    const checkInMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes();
+    if (checkInMinutes > officeStart + graceMin) {
+      lateBy = checkInMinutes - officeStart;
+    }
+
+    if (checkOutTime) {
+      const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
+      if (!activeShift?.isNightShift && checkOutMinutes < officeEnd) {
+        earlyExitBy = officeEnd - checkOutMinutes;
       }
 
-      if (checkOutTime) {
-        const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
-        if (checkOutMinutes < officeEnd) {
-          earlyExitBy = officeEnd - checkOutMinutes;
-        }
-
-        if (config.halfDayMinutes > 0 && totalWorkMinutes !== null) {
-          isHalfDay = totalWorkMinutes < config.halfDayMinutes;
-        }
+      if (halfDayThreshold > 0 && totalWorkMinutes !== null) {
+        isHalfDay = totalWorkMinutes < halfDayThreshold;
       }
     }
 
@@ -783,6 +1162,7 @@ export const createManualAttendance = async (
       record = await prisma.attendanceRecord.update({
         where: { id: existing.id },
         data: {
+          shiftId: employee.shiftId || null,
           checkInTime,
           checkOutTime,
           totalWorkMinutes,
@@ -798,6 +1178,7 @@ export const createManualAttendance = async (
         data: {
           companyId,
           employeeId,
+          shiftId: employee.shiftId || null,
           date: targetDate,
           checkInTime,
           checkOutTime,
@@ -815,6 +1196,285 @@ export const createManualAttendance = async (
       status: 'success',
       message: existing ? 'Attendance record updated successfully.' : 'Manual attendance created successfully.',
       data: record,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SHIFT MANAGEMENT ENDPOINTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+export const getShifts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const companyId = req.user!.companyId;
+    let shifts = await prisma.shift.findMany({
+      where: { companyId },
+      include: {
+        _count: {
+          select: { employees: true },
+        },
+      },
+      orderBy: [{ isDefault: 'desc' }, { startTime: 'asc' }],
+    });
+
+    // Auto-seed default shifts for companies that don't have shifts yet
+    if (shifts.length === 0) {
+      for (const defShift of DEFAULT_COMPANY_SHIFTS) {
+        await prisma.shift.create({
+          data: {
+            ...defShift,
+            companyId,
+          },
+        });
+      }
+      shifts = await prisma.shift.findMany({
+        where: { companyId },
+        include: {
+          _count: {
+            select: { employees: true },
+          },
+        },
+        orderBy: [{ isDefault: 'desc' }, { startTime: 'asc' }],
+      });
+    }
+
+    res.json({ status: 'success', data: shifts });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createShift = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (req.user!.role !== 'SUPER_ADMIN' && req.user!.role !== 'ADMIN') {
+      throw new ForbiddenError('Only Admin or Super Admin can create shifts.');
+    }
+    const companyId = req.user!.companyId;
+    const data = shiftSchema.parse(req.body);
+
+    const [startH, startM] = data.startTime.split(':').map(Number);
+    const [endH, endM] = data.endTime.split(':').map(Number);
+    const autoNightShift = data.isNightShift || (endH * 60 + endM <= startH * 60 + startM);
+
+    const breakError = validateShiftBreakTiming(
+      data.startTime,
+      data.endTime,
+      data.breakStartTime,
+      data.breakEndTime,
+      data.breakDurationMinutes,
+      autoNightShift
+    );
+    if (breakError) {
+      throw new BadRequestError(breakError);
+    }
+
+    // Geofencing coordinates validation: if shift geofencing is on, verify either shift or company has coordinates
+    if (data.geoFencingEnabled && (data.geoLat == null || data.geoLng == null)) {
+      const companyConfig = await prisma.attendanceConfig.findUnique({ where: { companyId } });
+      if (!companyConfig || companyConfig.geoLat == null || companyConfig.geoLng == null) {
+        throw new BadRequestError('GPS Coordinates (Latitude & Longitude) must be provided when Geofencing is enabled.');
+      }
+    }
+
+    if (data.isDefault) {
+      await prisma.shift.updateMany({
+        where: { companyId, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    const shift = await prisma.shift.create({
+      data: {
+        ...data,
+        isNightShift: autoNightShift,
+        companyId,
+      },
+      include: {
+        _count: {
+          select: { employees: true },
+        },
+      },
+    });
+
+    res.status(201).json({
+      status: 'success',
+      message: `Shift "${shift.name}" created successfully.`,
+      data: shift,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateShift = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (req.user!.role !== 'SUPER_ADMIN' && req.user!.role !== 'ADMIN') {
+      throw new ForbiddenError('Only Admin or Super Admin can modify shifts.');
+    }
+    const { id } = req.params;
+    const companyId = req.user!.companyId;
+    const data = shiftSchema.parse(req.body);
+
+    const existing = await prisma.shift.findFirst({
+      where: { id, companyId },
+    });
+    if (!existing) throw new BadRequestError('Shift not found.');
+
+    const [startH, startM] = data.startTime.split(':').map(Number);
+    const [endH, endM] = data.endTime.split(':').map(Number);
+    const autoNightShift = data.isNightShift || (endH * 60 + endM <= startH * 60 + startM);
+
+    const breakError = validateShiftBreakTiming(
+      data.startTime,
+      data.endTime,
+      data.breakStartTime,
+      data.breakEndTime,
+      data.breakDurationMinutes,
+      autoNightShift
+    );
+    if (breakError) {
+      throw new BadRequestError(breakError);
+    }
+
+    // Geofencing coordinates validation: if shift geofencing is on, verify either shift or company has coordinates
+    if (data.geoFencingEnabled && (data.geoLat == null || data.geoLng == null)) {
+      const companyConfig = await prisma.attendanceConfig.findUnique({ where: { companyId } });
+      if (!companyConfig || companyConfig.geoLat == null || companyConfig.geoLng == null) {
+        throw new BadRequestError('GPS Coordinates (Latitude & Longitude) must be provided when Geofencing is enabled.');
+      }
+    }
+
+    if (data.isDefault) {
+      await prisma.shift.updateMany({
+        where: { companyId, isDefault: true, id: { not: id } },
+        data: { isDefault: false },
+      });
+    }
+
+    const updated = await prisma.shift.update({
+      where: { id },
+      data: {
+        ...data,
+        isNightShift: autoNightShift,
+      },
+      include: {
+        _count: {
+          select: { employees: true },
+        },
+      },
+    });
+
+    res.json({
+      status: 'success',
+      message: `Shift "${updated.name}" updated successfully.`,
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteShift = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (req.user!.role !== 'SUPER_ADMIN' && req.user!.role !== 'ADMIN') {
+      throw new ForbiddenError('Only Admin or Super Admin can delete shifts.');
+    }
+    const { id } = req.params;
+    const companyId = req.user!.companyId;
+
+    const existing = await prisma.shift.findFirst({
+      where: { id, companyId },
+      include: { _count: { select: { employees: true } } },
+    });
+    if (!existing) throw new BadRequestError('Shift not found.');
+
+    // Unassign employees from this shift first (or reassign to company default shift)
+    const defaultShift = await prisma.shift.findFirst({
+      where: { companyId, isDefault: true, id: { not: id } },
+    });
+
+    await prisma.employee.updateMany({
+      where: { companyId, shiftId: id },
+      data: { shiftId: defaultShift?.id || null },
+    });
+
+    await prisma.shift.delete({
+      where: { id },
+    });
+
+    res.json({
+      status: 'success',
+      message: `Shift "${existing.name}" deleted. Any assigned employees were reallocated to ${defaultShift ? defaultShift.name : 'unassigned'}.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const assignEmployeeShift = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (req.user!.role !== 'SUPER_ADMIN' && req.user!.role !== 'ADMIN') {
+      throw new ForbiddenError('Only Admin or Super Admin can assign employee shifts.');
+    }
+    const { id } = req.params;
+    const { shiftId } = req.body;
+    const companyId = req.user!.companyId;
+
+    const employee = await prisma.employee.findFirst({
+      where: { id, companyId },
+    });
+    if (!employee) throw new BadRequestError('Employee not found in company.');
+
+    if (shiftId) {
+      const shift = await prisma.shift.findFirst({
+        where: { id: shiftId, companyId },
+      });
+      if (!shift) throw new BadRequestError('Specified shift was not found.');
+    }
+
+    const updated = await prisma.employee.update({
+      where: { id },
+      data: { shiftId: shiftId || null },
+      include: {
+        shift: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            startTime: true,
+            endTime: true,
+            isNightShift: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      status: 'success',
+      message: `Shift assigned to ${updated.name} successfully.`,
+      data: updated,
     });
   } catch (error) {
     next(error);

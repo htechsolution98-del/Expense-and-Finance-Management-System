@@ -34,6 +34,17 @@ interface EmployeeProfile {
   status: string;
   department: { name: string } | null;
   designation: { name: string } | null;
+  shift?: {
+    id: string;
+    name: string;
+    code?: string | null;
+    startTime: string;
+    endTime: string;
+    breakStartTime?: string | null;
+    breakEndTime?: string | null;
+    selfieRequired?: boolean;
+    geoFencingEnabled?: boolean;
+  } | null;
   bankAccounts: BankAccount[];
   salaryStructures: any[];
 }
@@ -427,6 +438,18 @@ export default function EmployeePortal() {
                 <div><label>Employee Code</label><span className="emp-code">{profile?.employeeCode}</span></div>
                 <div><label>Department</label><span>{profile?.department?.name || 'General'}</span></div>
                 <div><label>Designation</label><span>{profile?.designation?.name || 'Staff'}</span></div>
+                <div>
+                  <label>Assigned Shift</label>
+                  <span className="font-semibold text-emerald-700">
+                    {profile?.shift ? `${profile.shift.name} (${profile.shift.startTime} - ${profile.shift.endTime})` : 'General Shift (09:00 - 18:00)'}
+                  </span>
+                </div>
+                <div>
+                  <label>Shift Break Window</label>
+                  <span>
+                    {profile?.shift?.breakStartTime ? `${profile.shift.breakStartTime} - ${profile.shift.breakEndTime}` : 'Standard (13:00 - 14:00)'}
+                  </span>
+                </div>
                 <div><label>Joining Date</label><span>{profile?.joiningDate ? fmtDate(profile.joiningDate) : '—'}</span></div>
                 <div><label>Email Address</label><span>{profile?.email}</span></div>
                 <div><label>Mobile Number</label><span>{profile?.mobile || '—'}</span></div>

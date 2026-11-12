@@ -37,21 +37,25 @@ export const DashboardLayout: React.FC = () => {
   };
 
   // Determine if company subscription has expired
-  const isGlobalMasterAdmin = currentUser.role === 'SUPER_ADMIN' && currentUser.companyId === '00000000-0000-0000-0000-000000000000';
+  const isMasterCompany = currentUser.companyId === '00000000-0000-0000-0000-000000000000';
+  const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
   
   const isSubscriptionExpired = (() => {
-    if (isGlobalMasterAdmin) return false;
+    // Root company and Super Admins are always exempt
+    if (isMasterCompany || isSuperAdmin) return false;
     
     const { subscriptionStatus, trialEndsAt, subscriptionEndsAt } = currentUser;
     if (!subscriptionStatus) return false; // Fail-safe
     
     const now = new Date();
     if (subscriptionStatus === 'ACTIVE') {
-      if (subscriptionEndsAt && new Date(subscriptionEndsAt) > now) {
+      // If subscription ends in future, or has no expiration (perpetual license), it is active
+      if (!subscriptionEndsAt || new Date(subscriptionEndsAt) > now) {
         return false;
       }
     } else if (subscriptionStatus === 'TRIAL') {
-      if (trialEndsAt && new Date(trialEndsAt) > now) {
+      // If trial ends in future or is unconstrained
+      if (!trialEndsAt || new Date(trialEndsAt) > now) {
         return false;
       }
     }
