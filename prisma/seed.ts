@@ -1,0 +1,434 @@
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('Seeding database...');
+
+  // 1. Create Default Company (name is intentionally blank — set it via Company Profile in the app)
+  const defaultCompany = await prisma.company.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000000' }, // fixed UUID for seed company
+    update: {
+      // Do NOT overwrite name/logo/address here — user sets these via Company Profile UI
+      status: 'ACTIVE',
+    },
+    create: {
+      id: '00000000-0000-0000-0000-000000000000',
+      name: '', // Set your company name from Company Profile settings
+      timezone: 'Asia/Kolkata',
+      currency: 'INR',
+      status: 'ACTIVE',
+    },
+  });
+  console.log(`Company record ready (id: ${defaultCompany.id})`);
+
+  // 2. Define Phase 2 Granular Permissions
+  const permissionsList = [
+    // Wildcard — SUPER_ADMIN only: grants access to everything
+    { name: '*', description: 'Wildcard — full system access (SUPER_ADMIN only)' },
+    { name: 'USER_VIEW', description: 'View system users' },
+    { name: 'USER_CREATE', description: 'Create system users' },
+    { name: 'USER_UPDATE', description: 'Update system users profile' },
+    { name: 'USER_DISABLE', description: 'Enable/disable system users' },
+    { name: 'ROLE_VIEW', description: 'View roles' },
+    { name: 'ROLE_CREATE', description: 'Create roles' },
+    { name: 'ROLE_UPDATE', description: 'Assign or edit roles' },
+    { name: 'COMPANY_VIEW', description: 'View company settings' },
+    { name: 'COMPANY_UPDATE', description: 'Update company settings' },
+    { name: 'ACCOUNT_VIEW', description: 'View accounts and balances' },
+    { name: 'ACCOUNT_CREATE', description: 'Create bank/cash accounts' },
+    { name: 'ACCOUNT_UPDATE', description: 'Update bank/cash accounts' },
+    { name: 'EXPENSE_VIEW', description: 'View office/staff expenses' },
+    { name: 'EXPENSE_CREATE', description: 'Submit office/staff expenses' },
+    { name: 'EXPENSE_APPROVE', description: 'Approve office/staff expenses' },
+    { name: 'PAYMENT_VIEW', description: 'View payment registry' },
+    { name: 'PAYMENT_CREATE', description: 'Create outgoing payment' },
+    { name: 'PAYMENT_APPROVE', description: 'Approve outgoing payment' },
+    { name: 'SALARY_VIEW', description: 'View employee salaries' },
+    { name: 'SALARY_CREATE', description: 'Generate monthly salaries' },
+    { name: 'SALARY_APPROVE', description: 'Approve monthly salaries' },
+    { name: 'LOAN_VIEW', description: 'View business loans' },
+    { name: 'LOAN_CREATE', description: 'Record business loans' },
+    { name: 'LOAN_APPROVE', description: 'Approve business loans/repayments' },
+    { name: 'ADVANCE_VIEW', description: 'View staff advances' },
+    { name: 'ADVANCE_CREATE', description: 'Submit staff advance requests' },
+    { name: 'ADVANCE_APPROVE', description: 'Approve/settle staff advances' },
+    { name: 'REPORT_VIEW', description: 'View analytics and reports' },
+    { name: 'LEAVE_VIEW', description: 'View leave requests and balance' },
+    { name: 'LEAVE_APPLY', description: 'Apply for leaves' },
+    { name: 'LEAVE_APPROVE', description: 'Approve pending leave requests' },
+    { name: 'LEAVE_REJECT', description: 'Reject pending leave requests' },
+    { name: 'LEAVE_CANCEL', description: 'Cancel leave requests' },
+    { name: 'LEAVE_MANAGE', description: 'Manage leave types and allocations' },
+    { name: 'LEAVE_BALANCE_MANAGE', description: 'Manage employee leave balances' },
+    { name: 'LEAVE_REPORT_VIEW', description: 'View leave reports and analytics' },
+    { name: 'LEAVE_POLICY_MANAGE', description: 'Manage company leave policies' },
+    { name: 'ANNOUNCEMENT_VIEW', description: 'View company announcements' },
+    { name: 'ANNOUNCEMENT_CREATE', description: 'Create, edit, and delete company announcements' },
+    { name: 'ATTENDANCE_MANUAL_MARK', description: 'Permission to manually mark or adjust attendance for employees' },
+    { name: 'ATTENDANCE_MANAGE', description: 'Permission to manage shifts, settings, and attendance' },
+  ];
+
+  const dbPermissions: Record<string, string> = {};
+  for (const perm of permissionsList) {
+    const createdPerm = await prisma.permission.upsert({
+      where: { name: perm.name },
+      update: { description: perm.description },
+      create: perm,
+    });
+    dbPermissions[perm.name] = createdPerm.id;
+  }
+  console.log(`Permissions seeded: ${Object.keys(dbPermissions).length} permissions`);
+
+  // 3. Define Standard Roles and Permissions Mapping
+  const rolesList = [
+    {
+      name: 'SUPER_ADMIN',
+      description: 'Super Admin - full system access',
+      permissions: ['*'],
+    },
+    {
+      name: 'ADMIN',
+      description: 'Admin - operational management and approval access',
+      permissions: [
+        'USER_VIEW', 'USER_CREATE', 'USER_UPDATE', 'USER_DISABLE',
+        'ROLE_VIEW', 'ROLE_CREATE', 'ROLE_UPDATE',
+        'COMPANY_VIEW', 'COMPANY_UPDATE',
+        'ACCOUNT_VIEW', 'ACCOUNT_CREATE', 'ACCOUNT_UPDATE',
+        'EXPENSE_VIEW', 'EXPENSE_CREATE', 'EXPENSE_APPROVE',
+        'PAYMENT_VIEW', 'PAYMENT_CREATE', 'PAYMENT_APPROVE',
+        'SALARY_VIEW', 'SALARY_CREATE', 'SALARY_APPROVE',
+        'LOAN_VIEW', 'LOAN_CREATE', 'LOAN_APPROVE',
+        'ADVANCE_VIEW', 'ADVANCE_CREATE', 'ADVANCE_APPROVE',
+        'REPORT_VIEW',
+        'LEAVE_VIEW', 'LEAVE_APPLY', 'LEAVE_APPROVE', 'LEAVE_REJECT', 'LEAVE_CANCEL', 'LEAVE_MANAGE', 'LEAVE_BALANCE_MANAGE', 'LEAVE_REPORT_VIEW', 'LEAVE_POLICY_MANAGE',
+        'ANNOUNCEMENT_VIEW',
+      ],
+    },
+    {
+      name: 'ACCOUNTS',
+      description: 'Accounts - bookkeeping and financial entry creation',
+      permissions: [
+        'USER_VIEW', 'ROLE_VIEW',
+        'ACCOUNT_VIEW', 'ACCOUNT_CREATE', 'ACCOUNT_UPDATE',
+        'EXPENSE_VIEW', 'EXPENSE_CREATE', 'EXPENSE_APPROVE',
+        'PAYMENT_VIEW', 'PAYMENT_CREATE', 'PAYMENT_APPROVE',
+        'SALARY_VIEW', 'SALARY_CREATE',
+        'LOAN_VIEW', 'LOAN_CREATE',
+        'ADVANCE_VIEW', 'ADVANCE_CREATE', 'ADVANCE_APPROVE',
+        'REPORT_VIEW',
+        'LEAVE_VIEW', 'LEAVE_APPLY', 'LEAVE_APPROVE', 'LEAVE_REJECT', 'LEAVE_CANCEL', 'LEAVE_REPORT_VIEW',
+        'ANNOUNCEMENT_VIEW',
+      ],
+    },
+    {
+      name: 'STAFF',
+      description: 'Staff - basic employee self-service',
+      permissions: [
+        'EXPENSE_VIEW', 'EXPENSE_CREATE',
+        'ADVANCE_VIEW', 'ADVANCE_CREATE',
+        'LEAVE_VIEW', 'LEAVE_APPLY', 'LEAVE_CANCEL',
+        'ANNOUNCEMENT_VIEW',
+      ],
+    },
+  ];
+
+  const seededRoles: Record<string, string> = {};
+
+  for (const r of rolesList) {
+    const role = await prisma.role.upsert({
+      where: { name: r.name },
+      update: { description: r.description },
+      create: {
+        name: r.name,
+        description: r.description,
+      },
+    });
+    seededRoles[role.name] = role.id;
+    console.log(`Seeding role ${role.name} permissions...`);
+
+    // Connect permissions to roles if not already present
+    for (const permName of r.permissions) {
+      const permId = dbPermissions[permName];
+      if (permId) {
+        const existingLink = await prisma.rolePermission.findFirst({
+          where: { roleId: role.id, permissionId: permId }
+        });
+        if (!existingLink) {
+          await prisma.rolePermission.create({
+            data: {
+              roleId: role.id,
+              permissionId: permId,
+            },
+          });
+        }
+      }
+    }
+  }
+
+  // 4. Seed Root SuperAdmin User only
+  // All other users (Admin, Accounts, Staff) must be created via the app UI by the SuperAdmin.
+  const passwordHash = await bcrypt.hash('Password@123', 12);
+
+  // SuperAdmin employee record
+  const superAdminEmp = await prisma.employee.upsert({
+    where: { companyId_employeeCode: { companyId: defaultCompany.id, employeeCode: 'EMP-001' } },
+    update: { name: 'Super Admin' },
+    create: {
+      companyId: defaultCompany.id,
+      employeeCode: 'EMP-001',
+      name: 'Super Admin',
+      email: 'superadmin@acme.com',
+      mobile: '9999999999',
+      joiningDate: new Date(),
+      address: '',
+      status: 'ACTIVE',
+    },
+  });
+
+  // SuperAdmin user account
+  const superAdminUser = await prisma.user.upsert({
+    where: { email: 'superadmin@acme.com' },
+    update: { name: 'Super Admin', passwordHash, status: 'ACTIVE', employeeId: superAdminEmp.id },
+    create: {
+      email: 'superadmin@acme.com',
+      name: 'Super Admin',
+      passwordHash,
+      companyId: defaultCompany.id,
+      status: 'ACTIVE',
+      employeeId: superAdminEmp.id,
+    },
+  });
+
+  // Assign SUPER_ADMIN role
+  await prisma.userRole.deleteMany({ where: { userId: superAdminUser.id } });
+  await prisma.userRole.create({
+    data: { userId: superAdminUser.id, roleId: seededRoles['SUPER_ADMIN'] },
+  });
+  console.log(`SuperAdmin user seeded: superadmin@acme.com (Password: Password@123)`);
+
+  // 5. Seed Default Leave Types
+  const defaultLeaveTypes = [
+    { code: 'CL', name: 'Casual Leave', description: 'Paid leave for personal matters', isPaid: true, annualQuota: 12, allowHalfDay: true },
+    { code: 'SL', name: 'Sick Leave', description: 'Paid leave for medical reasons', isPaid: true, annualQuota: 12, allowHalfDay: true },
+    { code: 'EL', name: 'Earned / Privilege Leave', description: 'Earned leave carried forward yearly', isPaid: true, annualQuota: 15, allowCarryForward: true, carryForwardLimit: 30 },
+    { code: 'PL', name: 'Paid Leave', description: 'Standard paid leave allowance', isPaid: true, annualQuota: 10, allowHalfDay: true },
+    { code: 'LWP', name: 'Unpaid Leave (LWP)', description: 'Leave Without Pay / Salary deduction', isPaid: false, annualQuota: 0, allowHalfDay: true },
+    { code: 'OL', name: 'Optional / Festival Leave', description: 'Optional holiday leaves', isPaid: true, annualQuota: 3, allowHalfDay: false },
+    { code: 'HD', name: 'Half Day Leave', description: 'Half day leave allowance', isPaid: true, annualQuota: 6, allowHalfDay: true },
+  ];
+
+  const seededLeaveTypes: Record<string, string> = {};
+  for (const lt of defaultLeaveTypes) {
+    const leaveType = await prisma.leaveType.upsert({
+      where: { companyId_code: { companyId: defaultCompany.id, code: lt.code } },
+      update: { name: lt.name, description: lt.description, isPaid: lt.isPaid, annualQuota: lt.annualQuota },
+      create: {
+        companyId: defaultCompany.id,
+        code: lt.code,
+        name: lt.name,
+        description: lt.description,
+        isPaid: lt.isPaid,
+        annualQuota: lt.annualQuota,
+        allowHalfDay: lt.allowHalfDay,
+        allowCarryForward: lt.allowCarryForward || false,
+        carryForwardLimit: lt.carryForwardLimit || null,
+        isActive: true,
+      },
+    });
+    seededLeaveTypes[lt.code] = leaveType.id;
+  }
+  console.log(`Default Leave Types seeded: ${Object.keys(seededLeaveTypes).length} types`);
+
+  // 6. Seed Default Leave Policy
+  const currentYear = new Date().getFullYear();
+  const existingPolicy = await prisma.leavePolicy.findFirst({
+    where: { companyId: defaultCompany.id, year: currentYear }
+  });
+  if (!existingPolicy) {
+    await prisma.leavePolicy.create({
+      data: {
+        companyId: defaultCompany.id,
+        name: 'Standard Corporate Policy',
+        year: currentYear,
+        workingDaysOnly: true,
+        excludeWeekends: true,
+        excludeHolidays: true,
+        advanceNoticeDays: 1,
+        allowNegativeBalance: false,
+        autoApprove: false,
+        isActive: true,
+      }
+    });
+    console.log('Default Leave Policy seeded');
+  }
+
+  // 7. Seed Leave Balances for all active employees
+  const employees = await prisma.employee.findMany({
+    where: { companyId: defaultCompany.id, status: 'ACTIVE' }
+  });
+
+  const leaveTypesList = await prisma.leaveType.findMany({
+    where: { companyId: defaultCompany.id, isActive: true }
+  });
+
+  for (const emp of employees) {
+    for (const lt of leaveTypesList) {
+      await prisma.leaveBalance.upsert({
+        where: {
+          employeeId_leaveTypeId_year: {
+            employeeId: emp.id,
+            leaveTypeId: lt.id,
+            year: currentYear,
+          }
+        },
+        update: {},
+        create: {
+          companyId: defaultCompany.id,
+          employeeId: emp.id,
+          leaveTypeId: lt.id,
+          year: currentYear,
+          allocated: lt.annualQuota,
+          used: 0,
+          pending: 0,
+          remaining: lt.annualQuota,
+          carriedForward: 0,
+        }
+      });
+    }
+  }
+  console.log(`Leave balances initialized for ${employees.length} employees`);
+
+  // 8. Seed Default Expense Categories
+  const defaultExpenseCategories = [
+    { id: 'cat-office-supplies', name: 'Office Supplies & Stationery' },
+    { id: 'cat-travel-conveyance', name: 'Travel & Conveyance' },
+    { id: 'cat-food-refreshments', name: 'Food & Client Refreshments' },
+    { id: 'cat-fuel-petrol', name: 'Fuel & Petrol Allowance' },
+    { id: 'cat-internet-phone', name: 'Internet & Phone Bills' },
+    { id: 'cat-equipment-maint', name: 'Equipment & Maintenance' },
+    { id: 'cat-miscellaneous', name: 'Miscellaneous Expense' },
+  ];
+
+  for (const cat of defaultExpenseCategories) {
+    await prisma.expenseCategory.upsert({
+      where: { id: cat.id },
+      update: { name: cat.name, status: 'ACTIVE', deletedAt: null },
+      create: {
+        id: cat.id,
+        companyId: defaultCompany.id,
+        name: cat.name,
+        status: 'ACTIVE',
+      },
+    });
+  }
+  console.log(`Default Expense Categories seeded: ${defaultExpenseCategories.length} categories`);
+
+  // 9. Seed Default Payment Categories
+  const defaultPaymentCategories = [
+    { id: 'pcat-sales-revenue', name: 'Sales Revenue', type: 'PAYMENT_IN' },
+    { id: 'pcat-vendor-payout', name: 'Vendor Payout', type: 'PAYMENT_OUT' },
+    { id: 'pcat-salary-payout', name: 'Salary & Payroll', type: 'PAYMENT_OUT' },
+    { id: 'pcat-office-expense', name: 'Office Expense', type: 'BOTH' },
+  ];
+
+  for (const pcat of defaultPaymentCategories) {
+    await prisma.paymentCategory.upsert({
+      where: { id: pcat.id },
+      update: { name: pcat.name, type: pcat.type, status: 'ACTIVE', deletedAt: null },
+      create: {
+        id: pcat.id,
+        companyId: defaultCompany.id,
+        name: pcat.name,
+        type: pcat.type,
+        status: 'ACTIVE',
+      },
+    });
+  }
+  console.log(`Default Payment Categories seeded: ${defaultPaymentCategories.length} categories`);
+
+  // 10. Seed Default Shifts (General, Morning, Evening, Night for hospitals & 24/7 organizations)
+  const defaultShifts = [
+    {
+      name: 'General Shift',
+      code: 'GEN',
+      startTime: '09:00',
+      endTime: '18:00',
+      graceMinutes: 15,
+      halfDayMinutes: 240,
+      breakDurationMinutes: 60,
+      breakStartTime: '13:00',
+      breakEndTime: '14:00',
+      isNightShift: false,
+      isDefault: true,
+    },
+    {
+      name: 'Morning Shift',
+      code: 'MORN',
+      startTime: '07:00',
+      endTime: '15:00',
+      graceMinutes: 15,
+      halfDayMinutes: 240,
+      breakDurationMinutes: 45,
+      breakStartTime: '11:00',
+      breakEndTime: '11:45',
+      isNightShift: false,
+      isDefault: false,
+    },
+    {
+      name: 'Evening Shift',
+      code: 'EVE',
+      startTime: '15:00',
+      endTime: '23:00',
+      graceMinutes: 15,
+      halfDayMinutes: 240,
+      breakDurationMinutes: 45,
+      breakStartTime: '19:00',
+      breakEndTime: '19:45',
+      isNightShift: false,
+      isDefault: false,
+    },
+    {
+      name: 'Night Shift',
+      code: 'NIGHT',
+      startTime: '23:00',
+      endTime: '07:00',
+      graceMinutes: 15,
+      halfDayMinutes: 240,
+      breakDurationMinutes: 45,
+      breakStartTime: '03:00',
+      breakEndTime: '03:45',
+      isNightShift: true,
+      isDefault: false,
+    },
+  ];
+
+  for (const shift of defaultShifts) {
+    await prisma.shift.upsert({
+      where: {
+        companyId_name: {
+          companyId: defaultCompany.id,
+          name: shift.name,
+        },
+      },
+      update: shift,
+      create: {
+        ...shift,
+        companyId: defaultCompany.id,
+      },
+    });
+  }
+  console.log(`Default Shifts seeded: ${defaultShifts.length} shifts`);
+
+  console.log('Database seeding successfully finished!');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
