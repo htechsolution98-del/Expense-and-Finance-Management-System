@@ -11,12 +11,16 @@ export async function calculateWorkingDays(
   toDateStr: string,
   dayType: string = 'FULL_DAY'
 ): Promise<{ totalDays: number; totalCalendarDays: number; holidaysCount: number; weekendsCount: number }> {
-  const fromDate = new Date(fromDateStr);
-  const toDate = new Date(toDateStr);
+  // Parse year, month, day to avoid timezone offsets between client and server
+  const [fYear, fMonth, fDay] = fromDateStr.split('T')[0].split('-').map(Number);
+  const [tYear, tMonth, tDay] = toDateStr.split('T')[0].split('-').map(Number);
 
-  if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+  if (!fYear || !fMonth || !fDay || !tYear || !tMonth || !tDay) {
     throw new BadRequestError('Invalid date format');
   }
+
+  const fromDate = new Date(Date.UTC(fYear, fMonth - 1, fDay, 12, 0, 0));
+  const toDate = new Date(Date.UTC(tYear, tMonth - 1, tDay, 12, 0, 0));
 
   if (fromDate > toDate) {
     throw new BadRequestError('From Date cannot be after To Date');
@@ -26,7 +30,7 @@ export async function calculateWorkingDays(
     return { totalDays: 0.5, totalCalendarDays: 1, holidaysCount: 0, weekendsCount: 0 };
   }
 
-  const currentYear = fromDate.getFullYear();
+  const currentYear = fYear;
 
   // Fetch company leave policy
   const policy = await prisma.leavePolicy.findFirst({
@@ -42,8 +46,8 @@ export async function calculateWorkingDays(
         where: {
           companyId,
           date: {
-            gte: new Date(currentYear, 0, 1),
-            lte: new Date(currentYear, 11, 31),
+            gte: new Date(Date.UTC(currentYear, 0, 1)),
+            lte: new Date(Date.UTC(currentYear, 11, 31, 23, 59, 59)),
           },
           isOptional: false,
         },
@@ -60,17 +64,16 @@ export async function calculateWorkingDays(
   let weekendsCount = 0;
 
   const cur = new Date(fromDate);
-  cur.setHours(0, 0, 0, 0);
-
   const end = new Date(toDate);
-  end.setHours(0, 0, 0, 0);
 
   while (cur <= end) {
     totalCalendarDays++;
-    const dayOfWeek = cur.getDay(); // 0 = Sun, 6 = Sat
+    const dayOfWeek = cur.getUTCDay(); // 0 = Sun
     const dateStr = cur.toISOString().split('T')[0];
 
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    // Sunday is the only weekly off in hospital & company shift policy (matching salary.controller.ts:462)
+    // Saturday is a standard working day.
+    const isWeekend = dayOfWeek === 0;
     const isHoliday = holidayDatesSet.has(dateStr);
 
     if (isWeekend && excludeWeekends) {
@@ -81,7 +84,7 @@ export async function calculateWorkingDays(
       totalDays++;
     }
 
-    cur.setDate(cur.getDate() + 1);
+    cur.setUTCDate(cur.getUTCDate() + 1);
   }
 
   return { totalDays, totalCalendarDays, holidaysCount, weekendsCount };
