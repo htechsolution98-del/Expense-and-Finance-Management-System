@@ -51,7 +51,11 @@ export const getMyPayslips = async (
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: {
+        payroll: {
+          createdAt: 'desc',
+        },
+      },
     });
 
     res.json({ status: 'success', data: items });
