@@ -7,6 +7,7 @@ import { prisma } from '../config/database';
 import { sendSuccess } from '../utils/apiResponse';
 import { BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { sendOTPEmail } from '../utils/mailer';
+import { parseRoster } from '../utils/roster.util';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Email or Phone is required'),
@@ -327,6 +328,108 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
         trialEndsAt: user.company.trialEndsAt,
         subscriptionEndsAt: user.company.subscriptionEndsAt,
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getMyShift = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw new UnauthorizedError('Not authenticated');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        company: true,
+        employee: {
+          select: {
+            id: true,
+            name: true,
+            shiftId: true,
+            address: true,
+            shift: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                startTime: true,
+                endTime: true,
+                isNightShift: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User profile not found');
+    }
+
+    // Default company shift
+    const defaultShift = await prisma.shift.findFirst({
+      where: { companyId: user.companyId, isDefault: true, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        startTime: true,
+        endTime: true,
+        isNightShift: true,
+      },
+    });
+
+    if (!user.employee) {
+      sendSuccess(res, 'Shift retrieved', {
+        hasShift: !!defaultShift,
+        shiftId: defaultShift?.id || null,
+        shiftName: defaultShift?.name || 'General Shift',
+        startTime: defaultShift?.startTime || '09:00',
+        endTime: defaultShift?.endTime || '18:00',
+        isNightShift: defaultShift?.isNightShift || false,
+        durationType: 'PERMANENT',
+        startDate: '',
+        endDate: null,
+        daysRemaining: null,
+        isExpired: false,
+        isExpiredFallback: false,
+        badgeText: 'Default Shift',
+      });
+      return;
+    }
+
+    const roster = parseRoster(user.employee.address, user.employee.shiftId);
+    let activeShift = user.employee.shift;
+    let isExpiredFallback = false;
+
+    if (roster.isExpired) {
+      activeShift = defaultShift;
+      isExpiredFallback = true;
+    } else if (!activeShift && defaultShift) {
+      activeShift = defaultShift;
+    }
+
+    sendSuccess(res, 'Shift retrieved', {
+      hasShift: !!activeShift,
+      shiftId: activeShift?.id || null,
+      shiftName: activeShift?.name || (defaultShift?.name || 'General Shift'),
+      startTime: activeShift?.startTime || '09:00',
+      endTime: activeShift?.endTime || '18:00',
+      isNightShift: activeShift?.isNightShift || false,
+      durationType: roster.schedule?.durationType || 'PERMANENT',
+      startDate: roster.schedule?.startDate || '',
+      endDate: roster.schedule?.endDate || null,
+      daysRemaining: roster.daysRemaining,
+      isExpired: roster.isExpired,
+      isExpiredFallback,
+      badgeText: isExpiredFallback ? 'Schedule Expired (Default)' : roster.statusText,
     });
   } catch (err) {
     next(err);

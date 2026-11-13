@@ -6,6 +6,7 @@ import { sendSuccess } from '../utils/apiResponse';
 import { BadRequestError, ForbiddenError, NotFoundError, ConflictError } from '../utils/errors';
 import { generateNextEmployeeCode } from '../utils/employeeCode';
 import { sendWelcomeEmail } from '../utils/mailer';
+import { parseRoster, serializeRoster, ShiftSchedule } from '../utils/roster.util';
 
 const createUserSchema = z.object({
   name: z.string().optional(),
@@ -94,6 +95,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction):
             id: true,
             employeeCode: true,
             shiftId: true,
+            address: true,
             shift: {
               select: {
                 id: true,
@@ -118,19 +120,47 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction):
       },
     });
 
-    const formattedUsers = users.map((user) => ({
-      id: user.id,
-      name: user.name,
-      phone: user.phone,
-      email: user.email,
-      status: user.status,
-      createdAt: user.createdAt,
-      employeeId: user.employee?.id || null,
-      employeeCode: user.employee?.employeeCode || null,
-      shiftId: user.employee?.shiftId || null,
-      shift: user.employee?.shift || null,
-      role: user.userRoles[0]?.role.name || 'STAFF',
-    }));
+    // Resolve company default shift for employees without a dedicated shift
+    const defaultShift = await prisma.shift.findFirst({
+      where: { companyId, isDefault: true, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        startTime: true,
+        endTime: true,
+        isNightShift: true,
+      },
+    });
+
+    const formattedUsers = users.map((user) => {
+      const roster = parseRoster(user.employee?.address, user.employee?.shiftId);
+      
+      let effectiveShift: any = user.employee?.shift || null;
+      if (roster.isExpired) {
+        effectiveShift = defaultShift ? { ...defaultShift, isDefaultInherited: true, isExpiredFallback: true } : null;
+      } else if (!effectiveShift && defaultShift) {
+        effectiveShift = { ...defaultShift, isDefaultInherited: true };
+      }
+
+      return {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        status: user.status,
+        createdAt: user.createdAt,
+        employeeId: user.employee?.id || null,
+        employeeCode: user.employee?.employeeCode || null,
+        shiftId: user.employee?.shiftId || null,
+        shift: effectiveShift,
+        shiftSchedule: roster.schedule,
+        shiftDaysRemaining: roster.daysRemaining,
+        isShiftExpired: roster.isExpired,
+        shiftStatusText: roster.statusText,
+        role: user.userRoles[0]?.role.name || 'STAFF',
+      };
+    });
 
     sendSuccess(res, 'Users retrieved successfully', formattedUsers);
   } catch (err) {
@@ -923,8 +953,35 @@ export const getUserExtraPermissions = async (
     const { id } = req.params;
     const companyId = req.companyId!;
 
-    // Verify user is in the same company
-    await getTenantScopedUser(id, companyId);
+    // Verify user is in the same company and include employee shift information
+    const user = await prisma.user.findFirst({
+      where: { id, companyId },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            employeeCode: true,
+            name: true,
+            shiftId: true,
+            address: true,
+            shift: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                startTime: true,
+                endTime: true,
+                isNightShift: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
 
     const userPerms = await prisma.userPermission.findMany({
       where: { userId: id },
@@ -933,7 +990,45 @@ export const getUserExtraPermissions = async (
 
     const extraPermissions = userPerms.map((up) => up.permission.name);
 
-    sendSuccess(res, 'User extra permissions retrieved', { extraPermissions });
+    // Fetch all active shifts in the company for roster scheduling
+    const companyShifts = await prisma.shift.findMany({
+      where: { companyId, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        startTime: true,
+        endTime: true,
+        isNightShift: true,
+        isDefault: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const defaultShift = companyShifts.find((s) => s.isDefault);
+
+    // Parse current roster schedule
+    const roster = parseRoster(user.employee?.address, user.employee?.shiftId);
+
+    let activeShift: any = user.employee?.shift || null;
+    if (roster.isExpired) {
+      activeShift = defaultShift ? { ...defaultShift, isDefaultInherited: true, isExpiredFallback: true } : null;
+    } else if (!activeShift && defaultShift) {
+      activeShift = { ...defaultShift, isDefaultInherited: true };
+    }
+
+    sendSuccess(res, 'User extra permissions and roster schedule retrieved', {
+      extraPermissions,
+      employeeId: user.employee?.id || null,
+      employeeName: user.employee?.name || user.name,
+      shiftId: user.employee?.shiftId || null,
+      currentShift: activeShift,
+      shiftSchedule: roster.schedule,
+      shiftDaysRemaining: roster.daysRemaining,
+      isShiftExpired: roster.isExpired,
+      shiftStatusText: roster.statusText,
+      shifts: companyShifts,
+    });
   } catch (err) {
     next(err);
   }
@@ -941,8 +1036,12 @@ export const getUserExtraPermissions = async (
 
 /**
  * PUT /users/:id/extra-permissions
- * Replaces all individually-granted permissions for a user.
- * Body: { permissions: string[] }  (array of permission names)
+ * Replaces all individually-granted permissions for a user and updates shift schedule.
+ * Body: {
+ *   permissions: string[],
+ *   shiftId?: string | null,
+ *   shiftSchedule?: { durationType, startDate, endDate, notes }
+ * }
  */
 export const setUserExtraPermissions = async (
   req: Request,
@@ -954,12 +1053,34 @@ export const setUserExtraPermissions = async (
     const companyId = req.companyId!;
     const grantedBy = req.user!.id;
 
-    const { permissions } = z
-      .object({ permissions: z.array(z.string()) })
-      .parse(req.body);
+    const extraPermsSchema = z.object({
+      permissions: z.array(z.string()),
+      shiftId: z.string().nullable().optional(),
+      shiftSchedule: z
+        .object({
+          durationType: z.enum(['PERMANENT', '1_WEEK', '2_WEEKS', '1_MONTH', 'CUSTOM']),
+          startDate: z.string(),
+          endDate: z.string().nullable().optional(),
+          notes: z.string().optional(),
+        })
+        .nullable()
+        .optional(),
+    });
+
+    const { permissions, shiftId, shiftSchedule } = extraPermsSchema.parse(req.body);
 
     // Verify target user belongs to same company
-    const targetUser = await getTenantScopedUser(id, companyId);
+    const targetUser = await prisma.user.findFirst({
+      where: { id, companyId },
+      include: {
+        userRoles: { include: { role: true } },
+        employee: true,
+      },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundError('Target user not found');
+    }
 
     // Cannot grant permissions to SUPER_ADMIN (they already have '*')
     if (targetUser.userRoles[0]?.role?.name === 'SUPER_ADMIN') {
@@ -977,12 +1098,12 @@ export const setUserExtraPermissions = async (
       throw new BadRequestError(`Unknown permissions: ${invalidPerms.join(', ')}`);
     }
 
-    // Replace all user permissions atomically
-    const updatedPerms = await prisma.$transaction(async (tx) => {
-      // Delete existing user-specific permissions
+    // Replace all user permissions and update roster shift atomically
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Delete existing user-specific permissions
       await tx.userPermission.deleteMany({ where: { userId: id } });
 
-      // Insert new ones
+      // 2. Insert new ones
       if (permRecords.length > 0) {
         await tx.userPermission.createMany({
           data: permRecords.map((p) => ({
@@ -993,7 +1114,46 @@ export const setUserExtraPermissions = async (
         });
       }
 
-      // Audit log
+      // 3. Update employee shift and schedule if provided
+      let updatedEmployee = null;
+      if (targetUser.employee && (shiftId !== undefined || shiftSchedule !== undefined)) {
+        const cleanShiftId = shiftId || null;
+        let scheduleToSave: ShiftSchedule | null = null;
+
+        if (shiftSchedule) {
+          scheduleToSave = {
+            shiftId: cleanShiftId,
+            durationType: shiftSchedule.durationType,
+            startDate: shiftSchedule.startDate || new Date().toISOString().split('T')[0],
+            endDate: shiftSchedule.endDate || null,
+            notes: shiftSchedule.notes,
+            assignedAt: new Date().toISOString(),
+          };
+        } else if (cleanShiftId) {
+          scheduleToSave = {
+            shiftId: cleanShiftId,
+            durationType: 'PERMANENT',
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: null,
+            assignedAt: new Date().toISOString(),
+          };
+        }
+
+        const serializedAddress = serializeRoster(targetUser.employee.address, scheduleToSave);
+
+        updatedEmployee = await tx.employee.update({
+          where: { id: targetUser.employee.id },
+          data: {
+            shiftId: cleanShiftId,
+            address: serializedAddress,
+          },
+          include: {
+            shift: true,
+          },
+        });
+      }
+
+      // 4. Audit log
       await tx.auditLog.create({
         data: {
           companyId,
@@ -1003,16 +1163,24 @@ export const setUserExtraPermissions = async (
           action: 'USER_EXTRA_PERMISSIONS_UPDATE',
           ipAddress: req.ip || '127.0.0.1',
           userAgent: req.headers['user-agent'] || 'unknown',
-          newData: JSON.stringify({ extraPermissions: validPermNames }),
+          newData: JSON.stringify({
+            extraPermissions: validPermNames,
+            shiftId,
+            shiftSchedule,
+          }),
         },
       });
 
-      return validPermNames;
+      return {
+        validPermNames,
+        updatedEmployee,
+      };
     });
 
-    sendSuccess(res, 'User extra permissions updated successfully', {
+    sendSuccess(res, 'User extra permissions and shift schedule updated successfully', {
       userId: id,
-      extraPermissions: updatedPerms,
+      extraPermissions: result.validPermNames,
+      employee: result.updatedEmployee,
     });
   } catch (err) {
     next(err);

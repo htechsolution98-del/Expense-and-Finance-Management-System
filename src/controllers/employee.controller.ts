@@ -3,6 +3,7 @@ import { prisma } from '../config/database';
 import { z } from 'zod';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
 import { generateNextEmployeeCode } from '../utils/employeeCode';
+import { parseRoster, getCleanAddress } from '../utils/roster.util';
 
 // ─────────────────────────────────────────────────────────────
 // Validators
@@ -102,7 +103,7 @@ export const getMyProfile = async (
       include: {
         department: { select: { name: true } },
         designation: { select: { name: true } },
-        shift: { select: { id: true, name: true, code: true, startTime: true, endTime: true, isNightShift: true } },
+        shift: { select: { id: true, name: true, code: true, startTime: true, endTime: true, breakStartTime: true, breakEndTime: true, isNightShift: true } },
         bankAccounts: {
           orderBy: { createdAt: 'desc' },
           take: 1,
@@ -116,7 +117,34 @@ export const getMyProfile = async (
 
     if (!employee) throw new NotFoundError('Employee profile not found.');
 
-    res.json({ status: 'success', data: employee });
+    const defaultShift = employee.companyId
+      ? await prisma.shift.findFirst({
+          where: { companyId: employee.companyId, isDefault: true, isActive: true },
+          select: { id: true, name: true, code: true, startTime: true, endTime: true, breakStartTime: true, breakEndTime: true, isNightShift: true },
+        })
+      : null;
+
+    // Parse roster schedule from address string
+    const roster = parseRoster(employee.address, employee.shiftId);
+    let effectiveShift: any = employee.shift;
+
+    if (roster.isExpired) {
+      effectiveShift = defaultShift ? { ...defaultShift, isDefaultInherited: true, isExpiredFallback: true } : null;
+    } else if (!effectiveShift && defaultShift) {
+      effectiveShift = { ...defaultShift, isDefaultInherited: true };
+    }
+
+    const payload = {
+      ...employee,
+      address: getCleanAddress(employee.address),
+      shift: effectiveShift,
+      shiftSchedule: roster.schedule,
+      shiftDaysRemaining: roster.daysRemaining,
+      shiftStatusText: roster.statusText,
+      isShiftExpired: roster.isExpired,
+    };
+
+    res.json({ status: 'success', data: payload });
   } catch (error) {
     next(error);
   }

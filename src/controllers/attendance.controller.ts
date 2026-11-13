@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/database';
 import { z } from 'zod';
 import { BadRequestError, ForbiddenError } from '../utils/errors';
+import { parseRoster, serializeRoster, ShiftSchedule } from '../utils/roster.util';
 
 
 // ── Validators ────────────────────────────────────────────────────────────────
@@ -358,7 +359,16 @@ export const checkIn = async (
     // Get config
     const config = await prisma.attendanceConfig.findUnique({ where: { companyId } });
 
-    const activeShift = employee.shift;
+    // Resolve roster schedule and fallback if expired or unassigned
+    const roster = parseRoster(employee.address, employee.shiftId);
+    let activeShift = employee.shift;
+    if (roster.isExpired || (!activeShift && companyId)) {
+      const defaultShift = await prisma.shift.findFirst({
+        where: { companyId, isDefault: true, isActive: true },
+      });
+      activeShift = defaultShift;
+    }
+
     const isGeoRequired = activeShift?.geoFencingEnabled || config?.geoFencingEnabled || false;
     const isSelfieRequired = activeShift?.selfieRequired || config?.selfieRequired || false;
 
@@ -1264,7 +1274,7 @@ export const createShift = async (
 
     const [startH, startM] = data.startTime.split(':').map(Number);
     const [endH, endM] = data.endTime.split(':').map(Number);
-    const autoNightShift = data.isNightShift || (endH * 60 + endM <= startH * 60 + startM);
+    const autoNightShift = data.isNightShift || (endH * 60 + endM < startH * 60 + startM);
 
     const breakError = validateShiftBreakTiming(
       data.startTime,
@@ -1336,7 +1346,7 @@ export const updateShift = async (
 
     const [startH, startM] = data.startTime.split(':').map(Number);
     const [endH, endM] = data.endTime.split(':').map(Number);
-    const autoNightShift = data.isNightShift || (endH * 60 + endM <= startH * 60 + startM);
+    const autoNightShift = data.isNightShift || (endH * 60 + endM < startH * 60 + startM);
 
     const breakError = validateShiftBreakTiming(
       data.startTime,
@@ -1439,7 +1449,7 @@ export const assignEmployeeShift = async (
       throw new ForbiddenError('Only Admin or Super Admin can assign employee shifts.');
     }
     const { id } = req.params;
-    const { shiftId } = req.body;
+    const { shiftId, shiftSchedule } = req.body;
     const companyId = req.user!.companyId;
 
     const employee = await prisma.employee.findFirst({
@@ -1454,9 +1464,34 @@ export const assignEmployeeShift = async (
       if (!shift) throw new BadRequestError('Specified shift was not found.');
     }
 
+    let scheduleToSave: ShiftSchedule | null = null;
+    if (shiftSchedule) {
+      scheduleToSave = {
+        shiftId: shiftId || null,
+        durationType: shiftSchedule.durationType || 'PERMANENT',
+        startDate: shiftSchedule.startDate || new Date().toISOString().split('T')[0],
+        endDate: shiftSchedule.endDate || null,
+        notes: shiftSchedule.notes,
+        assignedAt: new Date().toISOString(),
+      };
+    } else if (shiftId) {
+      scheduleToSave = {
+        shiftId,
+        durationType: 'PERMANENT',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: null,
+        assignedAt: new Date().toISOString(),
+      };
+    }
+
+    const newAddress = serializeRoster(employee.address, scheduleToSave);
+
     const updated = await prisma.employee.update({
       where: { id },
-      data: { shiftId: shiftId || null },
+      data: {
+        shiftId: shiftId || null,
+        address: newAddress,
+      },
       include: {
         shift: {
           select: {

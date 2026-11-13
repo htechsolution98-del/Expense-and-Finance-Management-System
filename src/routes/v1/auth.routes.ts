@@ -4,6 +4,7 @@ import {
   refresh, 
   logout, 
   getMe, 
+  getMyShift,
   changePassword, 
   getNotifications,
   forgotPassword,
@@ -21,6 +22,7 @@ router.post('/reset-password', resetPassword);
 
 // Protected routes
 router.get('/me', authenticate, getMe);
+router.get('/my-shift', authenticate, getMyShift);
 router.post('/change-password', authenticate, changePassword);
 router.get('/notifications', authenticate, getNotifications);
 
