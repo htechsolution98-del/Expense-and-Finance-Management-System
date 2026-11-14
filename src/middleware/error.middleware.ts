@@ -26,11 +26,11 @@ export const errorMiddleware = (
 
   // 2. Handle Zod validation errors
   if (err instanceof ZodError) {
-    const errors = err.errors.map((e) => ({
+    const issues = (err.issues || (err as any).errors || []).map((e: any) => ({
       field: e.path.join('.'),
       message: e.message,
     }));
-    sendError(res, 'Validation failed', 400, 'VALIDATION_ERROR', errors);
+    sendError(res, 'Validation failed', 400, 'VALIDATION_ERROR', issues);
     return;
   }
 

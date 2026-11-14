@@ -1,4 +1,6 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
+import fs from 'fs';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -33,7 +35,6 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-import path from 'path';
 // Serve static uploads
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
@@ -57,9 +58,17 @@ app.use(limiter);
 // 4. API Endpoints Version 1
 app.use('/api/v1', v1Router);
 
-// 5. Serve static frontend in production
-const frontendDistPath = path.join(__dirname, '../../../frontend/dist');
-if (process.env.NODE_ENV === 'production') {
+// 5. Serve static frontend in production (with dynamic path detection)
+const possibleFrontendPaths = [
+  path.resolve(__dirname, '../../Attendance-Management-System-Frontend/dist'),
+  path.resolve(__dirname, '../../../Attendance-Management-System-Frontend/dist'),
+  path.resolve(__dirname, '../../../frontend/dist'),
+  path.resolve(process.cwd(), '../Attendance-Management-System-Frontend/dist'),
+  path.resolve(process.cwd(), 'public')
+];
+const frontendDistPath = possibleFrontendPaths.find((p) => fs.existsSync(p));
+
+if (process.env.NODE_ENV === 'production' && frontendDistPath) {
   app.use(express.static(frontendDistPath));
 }
 
@@ -68,7 +77,7 @@ app.use((req: Request, res: Response, _next: NextFunction) => {
   if (req.path.startsWith('/api')) {
     return sendError(res, 'Resource not found', 404, 'NOT_FOUND');
   }
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && frontendDistPath && fs.existsSync(path.join(frontendDistPath, 'index.html'))) {
     return res.sendFile(path.join(frontendDistPath, 'index.html'));
   }
   sendError(res, 'Resource not found', 404, 'NOT_FOUND');
