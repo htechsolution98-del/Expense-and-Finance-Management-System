@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "clean": "rimraf dist",
-    "build": "npm run clean && prisma generate && prisma db push --accept-data-loss && tsc",
+    "build": "npm run clean && prisma generate && tsc",
+    "db:deploy": "prisma db push",
     "start": "node dist/src/server.js",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
