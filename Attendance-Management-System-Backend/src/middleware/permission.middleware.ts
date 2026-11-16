@@ -8,8 +8,8 @@ export const authorize = (requiredPermission: string | string[]) => {
       return;
     }
 
-    // Wildcard '*' grants access to all routes (used for SUPER_ADMIN)
-    if (req.user.permissions.includes('*')) {
+    // Wildcard '*' or SUPER_ADMIN grants access to all routes
+    if (req.user.permissions.includes('*') || req.user.role === 'SUPER_ADMIN') {
       next();
       return;
     }

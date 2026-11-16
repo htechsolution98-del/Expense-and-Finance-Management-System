@@ -14,7 +14,7 @@ const router = Router();
 router.use(authenticate);
 router.use(tenantScopeMiddleware);
 
-router.get('/', authorize('ANNOUNCEMENT_VIEW'), getAnnouncements);
+router.get('/', getAnnouncements);
 router.post('/', authorize('SUPER_ADMIN_ONLY'), createAnnouncement);
 router.put('/:id', authorize('SUPER_ADMIN_ONLY'), updateAnnouncement);
 router.delete('/:id', authorize('SUPER_ADMIN_ONLY'), deleteAnnouncement);

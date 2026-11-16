@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 import { prisma } from '../config/database';
+import { DEFAULT_ROLE_PERMISSIONS } from '../config/permissions';
 
 interface DecodedToken {
   sub: string;
@@ -60,9 +61,15 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
       }
 
       const roleName = dbUser.userRoles[0]?.role.name || 'STAFF';
-      const rolePermissions = dbUser.userRoles.flatMap((ur) =>
+      let rolePermissions = dbUser.userRoles.flatMap((ur) =>
         ur.role.rolePermissions.map((rp) => rp.permission.name)
       );
+
+      // Fallback to default role permissions if database has no mapped role permissions for this role
+      if (rolePermissions.length === 0 && DEFAULT_ROLE_PERMISSIONS[roleName]) {
+        rolePermissions = DEFAULT_ROLE_PERMISSIONS[roleName];
+      }
+
       const extraPermissions = dbUser.userPermissions.map((up) => up.permission.name);
 
       const permissions = (roleName === 'SUPER_ADMIN' || rolePermissions.includes('*'))

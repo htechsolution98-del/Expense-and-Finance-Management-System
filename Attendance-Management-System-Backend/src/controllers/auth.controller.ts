@@ -8,6 +8,7 @@ import { sendSuccess } from '../utils/apiResponse';
 import { BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { sendOTPEmail } from '../utils/mailer';
 import { parseRoster } from '../utils/roster.util';
+import { DEFAULT_ROLE_PERMISSIONS } from '../config/permissions';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Email or Phone is required'),
@@ -38,12 +39,17 @@ async function getUserRolesAndPermissions(userId: string) {
   });
 
   const role = userRoles[0]?.role.name || 'STAFF';
-  const rolePermissions = userRoles.flatMap((ur) =>
+  let rolePermissions = userRoles.flatMap((ur) =>
     ur.role.rolePermissions.map((rp) => rp.permission.name)
   );
 
-  // 2. If SUPER_ADMIN (has '*' wildcard), skip extra lookup — already full access
-  if (rolePermissions.includes('*')) {
+  // Fallback to default role permissions if database has no mapped role permissions for this role
+  if (rolePermissions.length === 0 && DEFAULT_ROLE_PERMISSIONS[role]) {
+    rolePermissions = DEFAULT_ROLE_PERMISSIONS[role];
+  }
+
+  // 2. If SUPER_ADMIN (or has '*' wildcard), skip extra lookup — already full access
+  if (role === 'SUPER_ADMIN' || rolePermissions.includes('*')) {
     return { role, permissions: ['*'] };
   }
 
