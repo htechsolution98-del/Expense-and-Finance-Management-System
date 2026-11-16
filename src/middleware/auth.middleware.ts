@@ -1,0 +1,87 @@
+import { Request, Response, NextFunction } from 'express';
+import * as jwt from 'jsonwebtoken';
+import { UnauthorizedError, ForbiddenError } from '../utils/errors';
+import { prisma } from '../config/database';
+
+interface DecodedToken {
+  sub: string;
+  companyId: string;
+  role: string;
+  permissions: string[];
+  employeeId: string | null;
+}
+
+export const authenticate = (req: Request, _res: Response, next: NextFunction): void => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    next(new UnauthorizedError('Access token is missing or invalid'));
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const secret = process.env.JWT_ACCESS_SECRET || 'fallback_secret';
+    const decoded = jwt.verify(token, secret) as DecodedToken;
+
+    // Fetch user role and permissions dynamically from database to support instant changes
+    prisma.user.findUnique({
+      where: { id: decoded.sub },
+      include: {
+        company: true,
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        userPermissions: {
+          include: {
+            permission: true
+          }
+        }
+      }
+    }).then((dbUser) => {
+      if (!dbUser || dbUser.status === 'DELETED' || dbUser.status === 'INACTIVE') {
+        next(new UnauthorizedError('User account is invalid or deactivated'));
+        return;
+      }
+
+      // Block requests if company is suspended, except for Global Master Admin company
+      if (dbUser.companyId !== '00000000-0000-0000-0000-000000000000' && dbUser.company.status !== 'ACTIVE') {
+        next(new ForbiddenError('Your company account is suspended or inactive. Please contact support.'));
+        return;
+      }
+
+      const roleName = dbUser.userRoles[0]?.role.name || 'STAFF';
+      const rolePermissions = dbUser.userRoles.flatMap((ur) =>
+        ur.role.rolePermissions.map((rp) => rp.permission.name)
+      );
+      const extraPermissions = dbUser.userPermissions.map((up) => up.permission.name);
+
+      const permissions = (roleName === 'SUPER_ADMIN' || rolePermissions.includes('*'))
+        ? ['*']
+        : Array.from(new Set([...rolePermissions, ...extraPermissions]));
+
+      req.user = {
+        id: dbUser.id,
+        companyId: dbUser.companyId,
+        role: roleName,
+        permissions: permissions,
+        employeeId: dbUser.employeeId || null,
+      };
+
+      next();
+    }).catch((err) => {
+      next(err);
+    });
+  } catch (err) {
+    next(new UnauthorizedError('Token verification failed'));
+  }
+};
