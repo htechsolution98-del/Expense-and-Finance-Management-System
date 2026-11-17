@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "clean": "rimraf dist",
-    "build": "npm run clean && prisma generate && tsc",
+    "build": "prisma generate && tsc",
     "db:deploy": "prisma db push",
-    "start": "node dist/src/server.js",
+    "start": "node -e \"const fs=require('fs');if(!fs.existsSync('./dist/src/server.js')&&!fs.existsSync('./dist/server.js')){console.log('Dist not found. Auto-building...');require('child_process').execSync('npm run build',{stdio:'inherit'})};const p=fs.existsSync('./dist/src/server.js')?'./dist/src/server.js':'./dist/server.js';require(p);\"",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -32,7 +32,10 @@
     "nodemailer": "^10.5.0",
     "pino": "^9.3.2",
     "pino-http": "^10.2.0",
+    "prisma": "^5.18.0",
     "razorpay": "^2.9.8",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.5.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {
