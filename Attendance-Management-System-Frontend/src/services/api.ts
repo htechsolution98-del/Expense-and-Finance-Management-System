@@ -55,6 +55,7 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch (refreshErr) {
           // If refresh request fails, log out
+          console.warn('[API Interceptor] 401 Refresh failed, logging out:', refreshErr);
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           localStorage.removeItem('user');
@@ -65,6 +66,7 @@ api.interceptors.response.use(
         }
       } else {
         // No refresh token available, log out
+        console.warn('[API Interceptor] 401 Received without refresh token, logging out.');
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');

@@ -147,6 +147,7 @@ export const Login: React.FC = () => {
       localStorage.setItem('access_token', accessToken);
       localStorage.setItem('refresh_token', refreshToken);
       localStorage.setItem('user', JSON.stringify(user));
+      console.log('[Login] Successfully authenticated user:', user.email, 'Role:', user.role);
 
       navigate('/');
     } catch (err: any) {

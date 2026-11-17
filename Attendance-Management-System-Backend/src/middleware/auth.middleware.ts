@@ -21,7 +21,7 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
 
   const token = authHeader.split(' ')[1];
   try {
-    const secret = process.env.JWT_ACCESS_SECRET || 'fallback_secret';
+    const secret = process.env.JWT_ACCESS_SECRET || 'cf_portal_local_dev_access_token_secret_hash_2026';
     const decoded = jwt.verify(token, secret) as DecodedToken;
 
     // Fetch user role and permissions dynamically from database to support instant changes
@@ -55,7 +55,7 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
       }
 
       // Block requests if company is suspended, except for Global Master Admin company
-      if (dbUser.companyId !== '00000000-0000-0000-0000-000000000000' && dbUser.company.status !== 'ACTIVE') {
+      if (dbUser.companyId !== '00000000-0000-0000-0000-000000000000' && dbUser.company && dbUser.company.status !== 'ACTIVE') {
         next(new ForbiddenError('Your company account is suspended or inactive. Please contact support.'));
         return;
       }
